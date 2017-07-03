@@ -59,6 +59,7 @@ exports.MIME_TYPES = {
     ".dll"     : "application/x-msdownload",
     ".dmg"     : "application/octet-stream",
     ".doc"     : "application/msword",
+    ".docx"    : "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     ".dot"     : "application/msword",
     ".dtd"     : "application/xml-dtd",
     ".dvi"     : "application/x-dvi",
