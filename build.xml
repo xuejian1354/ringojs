@@ -29,6 +29,7 @@
         <property name="lib" value="${home}/lib"/>
         <property name="build" value="${home}/build"/>
         <property name="classes" value="${build}/classes"/>
+        <property name="baseclasses" value="${home}/classes"/>
         <property name="docs" value="${home}/docs"/>
         <property name="jsdocs" value="${home}/docs/modules"/>
         <property name="javadocs" value="${home}/docs/java"/>
@@ -48,6 +49,7 @@
                 <exclude name="${ringo-core.jar}"/>
             </fileset>
             <pathelement location="${classes}"/>
+            <pathelement location="${baseclasses}"/>
         </path>
     </target>
 
@@ -106,6 +108,7 @@
     <target name="jar" depends="compile">
         <jar jarfile="${ringo-core.jar}">
             <fileset dir="${classes}"/>
+            <fileset dir="${baseclasses}"/>
             <fileset dir="${src}" excludes="**/*.java,**/package.html"/>
         </jar>
         <jar jarfile="${ringo-modules.jar}">
