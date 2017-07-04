@@ -20,7 +20,6 @@ import org.mozilla.javascript.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.*;
 import java.util.Enumeration;
 import java.lang.reflect.Method;
 
@@ -81,8 +80,6 @@ public class JsgiRequest extends ScriptableObject {
             name = name.toLowerCase();
             headers.put(name, headers, value);
         }
-        String body = getBody();
-        put("body", this,  checkString(body));
         put("scriptName", this, checkString(request.getContextPath()
                 + request.getServletPath()));
         String pathInfo = request.getPathInfo();
@@ -113,20 +110,6 @@ public class JsgiRequest extends ScriptableObject {
 
     public String getQueryString() {
         return checkString(request.getQueryString());
-    }
-
-    public String getBody() {
-        String str, wholeStr = "";
-
-        try {
-            BufferedReader br = request.getReader();
-            while((str = br.readLine()) != null) {
-                wholeStr += str;
-            }
-        } catch (IOException e) {
-        }
-
-        return checkString(wholeStr);
     }
 
     public Object getHttpVersion() {
