@@ -42,7 +42,7 @@ public class Main {
      */
     public static void main(String[] args) {
         Main main = new Main();
-        main.run(args);
+        main.run(new String[]{System.getProperty("ringo.home")+"/main.js"});
     }
 
     public Main() {

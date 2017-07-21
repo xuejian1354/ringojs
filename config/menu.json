@@ -1,0 +1,63 @@
+{
+  "title": "RingoSite",
+  "menus": [
+    {
+	  "name": "网盘",
+	  "action": "pan",
+	  "submenu": [
+	    {
+		  "name": "全部文件",
+		  "action": "all"
+		},
+		{
+		  "name": "图片",
+		  "action": "picture"
+		},
+		{
+		  "name": "文档",
+		  "action": "document"
+		},
+		{
+		  "name": "种子",
+		  "action": "bittorrent"
+		},
+		{
+		  "name": "音乐",
+		  "action": "music"
+		},
+		{
+		  "name": "其它",
+		  "action": "other"
+		},
+		{
+		  "name": "我的分享",
+		  "action": "myshare"
+		},
+		{
+		  "name": "回收站",
+		  "action": "recycle"
+		}
+	  ]
+    },
+	{
+	  "name": "分享",
+	  "action": "share",
+	  "submenu": [
+		{
+		  "name": "分享",
+		  "action": "share"
+		}
+	  ]
+    },
+	{
+	  "name": "更多",
+	  "action": "more",
+	  "submenu": [
+		{
+		  "name": "密码修改",
+		  "action": "resetpass"
+		}
+	  ]
+    }
+  ]
+}

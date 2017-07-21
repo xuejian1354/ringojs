@@ -1,0 +1,15 @@
+{
+  "name": "RingoSite",
+  "port": 8080,
+  "datapath": "/mnt/ringojs/data",
+  "dbsupport": "db",
+  "database": "/mnt/ringojs/data/ringo",
+  "ownbaseurl": "/owncloud",
+  "owncloud": {
+	"installed": true,
+	"maintenance": false,
+	"version": "9.1.5.2",
+	"versionstring": "9.1.5",
+	"edition": ""
+  }
+}

@@ -1,0 +1,309 @@
+/*
+ * Globals
+ */
+
+body {
+  font-family: Georgia, "Times New Roman", Times, serif;
+  color: #555;
+}
+
+h1, .h1,
+h2, .h2,
+h3, .h3,
+h4, .h4,
+h5, .h5,
+h6, .h6 {
+  margin-top: 0;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: normal;
+  color: #333;
+}
+
+
+/*
+ * Masthead for nav
+ */
+
+.ringo-nav {
+  min-height: 40px;
+  margin-bottom: 0;
+  background-color: #428bca;
+  -webkit-box-shadow: inset 0 -2px 5px rgba(0,0,0,.1);
+          box-shadow: inset 0 -2px 5px rgba(0,0,0,.1);
+}
+
+.ringo-brand{
+  height: 40px;
+  padding: 10px 15px;
+  color: #d5fbfd;
+  font-weight: bold;
+}
+
+.ringo-brand:hover,
+.ringo-brand:focus {
+  color: #fff;
+}
+
+/* Nav links */
+.ringo-nav-item {
+  position: relative;
+  display: inline-block;
+  padding: 10px;
+  color: #cdddeb;
+}
+.ringo-nav-item:hover,
+.ringo-nav-item:focus {
+  cursor: pointer;
+  font-weight: bold;
+  color: #fff;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Active state gets a caret at the bottom */
+.ringo-nav .active {
+  color: #fff;
+}
+.ringo-nav .active:after {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 0;
+  margin-left: -5px;
+  vertical-align: middle;
+  content: " ";
+  border-right: 5px solid transparent;
+  border-bottom: 5px solid;
+  border-left: 5px solid transparent;
+}
+
+
+.ringo-nav .dropdown {
+	display: block;
+	float: left;
+	margin: 0 10px 0 0;
+	position: relative;
+	left: 0;
+}
+
+.ringo-nav  .dropdown  a {
+	display: block;
+	float: none;
+	padding: 10px 10px 11px;
+	line-height: 19px;
+	text-decoration: none;
+	color: #cdddeb;
+}
+
+.ringo-nav  .dropdown .dropdown-menu {
+	margin-top: 0;
+	background-color: #eeeeee;
+}
+
+.dropdown-link .dropdown-menu {
+	display: none;
+}
+
+.dropdown-link:hover .dropdown-menu {
+	display: none;
+}
+
+.ringo-moreopt-nav{
+	display: none;
+}
+
+tr:hover .ringo-moreopt-nav{
+	display: block;
+}
+
+@media (max-width: 768px) {
+	.ringo-nav  .dropdown:hover .dropdown-auto {
+		display: block;
+	}
+
+	.ringo-nav  a.ringo-nav-item {
+		display: none;
+	}
+
+	#user-list>li>a.ringo-nav-item {
+		display: block;
+	}
+}
+
+@media (min-width: 768px) {
+	#user-list>li>a.ringo-nav-item {
+		display: none;
+	}
+}
+
+.ringo-nav  .dropdown  a.menu {
+	width: 49px;
+}
+
+#user-info, #user-list {
+	margin-right: -20px;
+}
+
+.ringo-nav  .dropdown a.homemenu:after {
+	width: 0;
+	height: 0;
+	display: inline-block;
+	content: "&darr;";
+	text-indent: -99999px;
+	vertical-align: top;
+	margin-top: 8px;
+	margin-left: 4px;
+	border-left: 4px solid transparent;
+	border-right: 4px solid transparent;
+	border-top: 4px solid #ffffff;
+	filter: alpha(opacity=50);
+	-khtml-opacity: 0.5;
+	-moz-opacity: 0.5;
+	opacity: 0.5;
+}
+
+.ringo-nav  .dropdown  a.homemenu:hover {
+	cursor: pointer;
+	color: #fff;
+}
+
+.ringo-nav  .dropdown  a.menu:hover {
+	cursor: pointer;
+	font-weight: bold;
+	color: #fff;
+	background: rgba(255, 255, 255, 0.05);
+}
+
+.ringo-nav  .dropdown .dropdown-menu  li a {
+	color: black;
+}
+
+.ringo-nav  .dropdown .dropdown-menu  li a:hover {
+	font-weight: bold;
+}
+
+.appside {
+  display: none;
+}
+@media (min-width: 768px) {
+  .appside {
+    position: fixed;
+    display: block;
+  }
+}
+
+
+/*
+ * Sidebar
+ */
+
+/* Hide for mobile, show later */
+.sidebar {
+  display: none;
+}
+@media (min-width: 768px) {
+  .sidebar {
+    position: fixed;
+    top: 41px;
+    bottom: 0;
+    left: 0;
+    z-index: 1000;
+    display: block;
+    padding: 20px;
+    overflow-x: hidden;
+    overflow-y: auto; /* Scrollable contents if viewport is shorter than content. */
+    background-color: #f5f5f5;
+    border-right: 1px solid #eee;
+  }
+}
+
+/* Sidebar navigation */
+.nav-sidebar {
+  margin-right: -21px; /* 20px padding + 1px border */
+  margin-bottom: 20px;
+  margin-left: -20px;
+}
+.nav-sidebar > li > a {
+  padding-right: 20px;
+  padding-left: 20px;
+}
+.nav-sidebar > .active > a,
+.nav-sidebar > .active > a:hover,
+.nav-sidebar > .active > a:focus {
+  color: #fff;
+  background-color: #428bca;
+}
+
+
+/*
+ * Main content
+ */
+.main {
+	margin-top: 121px;
+	padding: 20px;
+}
+@media (min-width: 372px) {
+	.main {
+	  margin-top: 81px;
+	  padding: 20px;
+	}
+}
+@media (min-width: 768px) {
+  .main {
+    margin-top: 41px;
+    padding-right: 40px;
+    padding-left: 40px;
+  }
+}
+.main .page-header {
+  margin-top: 0;
+}
+
+.homenav {min-height: 40px;}
+.homenav-bar>a, .homenav-bar>li>a {height: 40px; padding: 10px 15px;}
+
+.table>tbody>tr>td .btn {padding: 4px 8px; margin: -4px 0;}
+
+.td_col_1 {width: 30px;}
+.td_col_2 {width: 60px;}
+.td_col_3 {width: 90px;}
+.td_col_4 {width: 120px;}
+.td_col_5 {width: 150px;}
+.td_col_6 {width: 180px;}
+.td_col_7 {width: 210px;}
+.td_col_8 {width: 240px;}
+
+.classlisttitle {
+	font-weight: bold;
+	text-align: center;
+}
+
+.classsubtitle {
+	width: 114px;
+}
+
+.arrangeweekcourse {
+	width:100px;
+	padding: 0;
+}
+
+.arrangeweekbtn {
+	width:100%;
+	height:100%;
+	border: none;
+	overflow:visible;
+	padding:0;
+	outline: none;
+	background-color:transparent;
+	border-collapse:collapse;
+	
+}
+
+.arrangeweekcourseedt:hover {
+	background: #ddd;
+}
+
+select {
+	height: 26px;
+}

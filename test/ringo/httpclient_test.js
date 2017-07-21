@@ -343,7 +343,7 @@ exports.testCookie = function() {
             errorCalled = true;
         }
     });
-    //assert.isUndefined(errorCalled);
+    assert.isUndefined(errorCalled);
     assert.strictEqual(myStatus, 200);
     var cookie = myRequest.cookies[COOKIE_NAME];
     assert.strictEqual(cookie.value, COOKIE_VALUE);
@@ -413,7 +413,7 @@ exports.testStreamRequest = function() {
     assert.strictEqual(myContentType, "image/png");
 };
 
-function() {
+exports.testPost = function() {
 
     getResponse = function(req) {
         var input;

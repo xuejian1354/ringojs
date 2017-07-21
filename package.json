@@ -1,0 +1,17 @@
+{
+    "name": "ringosite",
+    "version": "1.0",
+    "description": "Static website publishing server.",
+    "keywords": ["publishing", "html"],
+    "maintainers": [],
+    "contributors": [],
+    "dependencies": {
+        "reinhardt": ">= 0.3",
+        "stick": ">= 0.4",
+        "gestalt": ">= 0.1.1"
+    },
+    "engines": {
+        "ringojs": ">= 0.10"
+    },
+    "main": "./main.js"
+}

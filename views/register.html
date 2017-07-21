@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>{{ title }} | Register</title>
+
+  <link rel="shortcut icon" type="image/x-icon" href="/static/img/favicon.ico">
+  <link rel="stylesheet" type="text/css" href="/static/css/bootstrap.min.css">
+  <script type="text/javascript" src="/static/js/jquery.min.js"></script>
+  <script type="text/javascript" src="/static/js/bootstrap.min.js"></script>
+</head>
+<body style="background-color: #f0f0f0;">
+<div style="padding: 8% 30%;">
+  <div style="text-align: center; margin-bottom: 20px;">
+    <b style="font-size: 40px; color: #454545">{{ title }}</b>
+  </div>
+  <div>
+    {% if error %}
+    <p><span class="glyphicon glyphicon-exclamation-sign" style="font-size: 15px; color: #a00;"></span> {{ error }}</p>
+	{% endif %}
+
+    <form class="form-horizontal" role="form" method="GET" action="/register.html">
+	  <input type="hidden" name="action" value="auth">
+      <div class="form-group has-feedback">
+        <input id="user" type="user" class="form-control" placeholder="User Name" name="user">
+        <span class="glyphicon glyphicon-user form-control-feedback"></span>
+      </div>
+      <div class="form-group has-feedback">
+        <input id="password" type="password" class="form-control" placeholder="Password" name="password">
+        <span class="glyphicon glyphicon-lock form-control-feedback"></span>
+      </div>
+	  <div class="form-group has-feedback">
+        <input id="repassword" type="password" class="form-control" placeholder="Repeat Password" name="repassword">
+        <span class="glyphicon glyphicon-lock form-control-feedback"></span>
+      </div>
+	  <div class="row">
+	    <div class="col-xs-8">
+		  <a href="/login.html" class="text-center">Back to login</a>
+		</div>
+		<div class="col-xs-4">
+          <button type="submit" class="btn btn-primary btn-block btn-flat">Register</button>
+		</div>
+      </div>
+    </form>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,52 @@
+{
+    "name": "ringo-sqlstore",
+    "version": "0.6.0",
+    "description": "SQL-Storage implementation for RingoJS",
+    "keywords": ["rhino", "ringo", "sql", "storage", "orm", "jdbc"],
+    "homepage": "https://github.com/grob/ringo-sqlstore",
+    "maintainers": [{
+            "name": "Robert Gaggl",
+            "web": "http://nomatic.org/",
+            "email": "robert@nomatic.org"
+        }],
+    "contributors": [{
+            "name": "Robert Gaggl",
+            "web": "http://nomatic.org/",
+            "email": "robert@nomatic.org"
+        },
+        {
+            "name": "Robert Thurnher",
+            "web": "http://robert42.com/",
+            "email": "r.thurnher@gmail.com>"
+        },
+        {
+            "name": "Hannes Wallnoefer",
+            "web": "http://hns.github.com/",
+            "email": "hannesw@gmail.com"
+        },
+        {
+            "name": "Simon Oberhammer",
+            "web": "http://nekapuzer.at/",
+            "email": "simon@nekapuzer.at"
+        },
+        {
+            "name": "Philipp Naderer",
+            "web": "http://naderer.biz/",
+            "email": "philipp@naderer.biz"
+        }
+    ],
+    "dependencies": {},
+    "bugs": "http://github.com/grob/ringo-sqlstore/issues",
+    "licenses": [{
+        "type": "Apache License Version 2.0",
+        "url": "http://www.apache.org/licenses/"
+    }],
+    "repositories": [{
+        "type": "git",
+        "url": "https://github.com/grob/ringo-sqlstore.git"
+    }],
+    "engines": {
+        "ringojs": ">= 0.10"
+    },
+    "main": "./lib/sqlstore/main.js"
+}
