@@ -17,7 +17,7 @@ app.static(
 	"/static",
 	{
 		"servePrecompressed": false,
-		"maxAge": 600,
+		"maxAge": 600
 	}
 );
 

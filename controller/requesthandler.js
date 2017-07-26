@@ -36,7 +36,7 @@ var HttpHandler = exports.HttpHandler = function(req) {
 		&& this.request.query.action != 'logout') {
 		this.request.query.action = this.selectMenu.submenu.action;
 	}
-	this.selectData = getDataByRequest(this.request);
+	//this.selectData = getDataByRequest(this.request);
 }
 
 HttpHandler.prototype.response = function(templates) {
@@ -49,24 +49,10 @@ HttpHandler.prototype.response = function(templates) {
 			"set-cookie": [setCookie('authKey', '', 0)]
 		});
 	}
-	else if(this.request.query.opt == 'resetpass') {
-		if(updateUserPass(this.request.query.username, this.request.query.password, this.request.query.newpassword)) {
-			var authKey = base64.encode(this.request.query.username + ':' + this.request.query.newpassword);
-			return response.setStatus(303).addHeaders({
-				"location": '/index.html?action=resetpass&reset=success',
-				"set-cookie": [setCookie('authKey', authKey, -1)]
-			});
-		}
-		else {
-			return response.setStatus(303).addHeaders({
-				"location": '/index.html?action=resetpass&reset=fail'
-			});
-		}
-	}
 
 	var restemp = templates.renderResponse('index.html', {
 		selectMenu: this.selectMenu,
-		selectData: this.selectData,
+		//selectData: this.selectData,
 		mconfig: this.mconfig,
 		user: this.request.user,
 		authKey: base64.encode(this.request.user.name + ':' + this.request.user.password),
@@ -129,24 +115,27 @@ function getSelectMenuByAction(menus, action) {
 
 function getDataByRequest(req) {
 	switch(req.query.action) {
-	case 'all':
-		var locpath = req.query.path || '/';
-		var homepath = config.get('datapath') + '/' + req.user.name + '/files';
-		if(!fs.exists(homepath)) {
-			fs.makeTree(homepath);
-		}
-
-		var abspath = homepath + locpath;
-
-		var locallist = getLocalPathList(locpath);
-		var lastlink;
-		if(locallist.length > 1) {
-			lastlink = locallist[locallist.length-2];
-		}
-		return {locallist: locallist, lastlink: lastlink, files: getAllFilesByPath(abspath)};
+	case 'all': return getSelectFiles(req.query.path, req.user.name);
 	}
 
 	return null;
+}
+
+function getSelectFiles(path, name) {
+	var locpath = path || '/';
+	var homepath = config.get('datapath') + '/' + name + '/files';
+	if(!fs.exists(homepath)) {
+		fs.makeTree(homepath);
+	}
+
+	var abspath = homepath + locpath;
+
+	var locallist = getLocalPathList(locpath);
+	var lastlink;
+	if(locallist.length > 1) {
+		lastlink = locallist[locallist.length-2];
+	}
+	return {path: path || '/', locallist: locallist, lastlink: lastlink, files: getAllFilesByPath(abspath)};
 }
 
 function getLocalPathList(locpath) {
@@ -247,6 +236,28 @@ function getFileSizeFormat(path) {
 var postHandler = exports.postHandler = function(req) {
 
 	switch(req.params.opt){
+	case 'view':
+		var retdata = {};
+		retdata.selectMenu = getSelectMenuByAction(menuconfig.get('menus'), req.params.action);
+		retdata.action = retdata.selectMenu.submenu.action;
+
+		switch(req.params.action) {
+		case 'pan':
+		case 'all':
+			retdata.selectData = getSelectFiles(req.params.path, req.user.name);
+			break;
+
+		case 'more':
+		case 'resetpass':
+			retdata.username = req.user.name;
+			break;
+
+		case 'logout':
+			retdata.action = 'logout';
+			break;
+		}
+		return response.setStatus(200).json(retdata);
+
 	case 'newfolder':
 		var locpath = req.params.path || '/';
 		var abspath = config.get('datapath') + '/' + req.user.name + '/files' + locpath;
@@ -288,7 +299,10 @@ var postHandler = exports.postHandler = function(req) {
 			retpath = fs.directory(decodeURIComponent(reqpaths[x]));
 		}
 
-		return response.setStatus(200).text('/index.html?action=all&path='+encodeURIComponent(retpath));
+		req.params.opt = 'view';
+		req.params.action = 'all';
+		req.params.path = retpath;
+		return postHandler(req);
 
 	case 'getfolders':
 		var locpath = req.params.path || '/';
@@ -318,7 +332,19 @@ var postHandler = exports.postHandler = function(req) {
 			}
 		}
 
-		return response.setStatus(200).text('/index.html?action=all&path='+encodeURIComponent(req.params.target));
+		req.params.opt = 'view';
+		req.params.action = 'all';
+		req.params.path = req.params.location;
+		return postHandler(req);
+
+	case 'resetpass':
+		if(updateUserPass(req.params.username, req.params.password, req.params.newpassword)) {
+			var authKey = base64.encode(req.params.username + ':' + req.params.newpassword);
+			return response.setStatus(200).json({status: 'success', authKey: authKey});
+		}
+		else {
+			return response.setStatus(200).json({status: 'fail'});
+		}
 	}
 
 	return response.setStatus(200);
@@ -328,19 +354,66 @@ var putHandler = exports.putHandler = function(req) {
 	const CRLF = new ByteString("\r\n", "ASCII");
 	const EMPTY_LINE = new ByteString("\r\n\r\n", "ASCII");
 
-	var referers = parseParameters(req.headers.referer.substr(req.headers.referer.indexOf('?')+1));
-	var path = referers.path || '/';
-
 	var boundary = new ByteString(req.headers['content-type'].substr(req.headers['content-type'].indexOf('boundary=')+9), "ASCII");
-	var crlfpos1 = req.body.indexOf(CRLF, boundary.length + 2);
-	var crlfpos2 = req.body.indexOf(CRLF, crlfpos1 + 2);
-	var disposition = req.body.slice(crlfpos1+2, crlfpos2).decodeToString().replace(/"/g, '');
-	var fname = disposition.substr(disposition.indexOf('filename=')+9);
-	var fpath = (path + '/' + fname).replace(/\/+/g, '/');
 
-	var emptypos = req.body.indexOf(EMPTY_LINE);
-	var endpos = req.body.lastIndexOf(boundary);
-	var content = req.body.slice(emptypos+4, endpos-4);
+	var relpath = null;
+	var fname = null;
+	var content = null;
+
+	var boundpos1 = 0;
+	var boundpos2 = 0;
+	while(boundpos1+boundary.length < req.body.length) {
+	  boundpos1 = req.body.indexOf(boundary, boundpos1);
+	  boundpos2 = req.body.indexOf(boundary, boundpos1+boundary.length);
+
+	  if(boundpos1 < 0 || boundpos2 < 0) {
+		  break;
+	  }
+
+	  var emptypos = req.body.indexOf(EMPTY_LINE, boundpos1);
+	  if(emptypos < boundpos2) {
+		var discontent = req.body.slice(boundpos1+boundary.length+2, emptypos).decodeToString().replace(/"/g, '');
+		var namepos = discontent.indexOf('name=');
+		var nameend = discontent.length;
+		var nameend1 = discontent.indexOf(';', namepos);
+		if(nameend1 > 0 && nameend1 < nameend) {
+			nameend = nameend1;
+		}
+		var nameend2 = discontent.indexOf('\r\n', namepos);
+		if(nameend2 > 0 && nameend2 < nameend) {
+			nameend = nameend2;
+		}
+
+		var dataname = discontent.substr(namepos+5, nameend-namepos-5);
+		switch(dataname) {
+		case 'relpath':
+			var relend = req.body.indexOf(CRLF, emptypos+4);
+			relpath = req.body.slice(emptypos+4, relend).decodeToString();
+			break;
+
+		case 'files[]':
+			var fnamepos = discontent.indexOf('filename=');
+			var fnameend = discontent.length;
+			var fnameend1 = discontent.indexOf(';', fnamepos);
+			if(fnameend1 > 0 && fnameend1 < fnameend) {
+				fnameend = fnameend1;
+			}
+			var fnameend2 = discontent.indexOf('\r\n', fnamepos);
+			if(fnameend2 > 0 && fnameend2 < fnameend) {
+				fnameend = fnameend2;
+			}
+			fname = discontent.substr(fnamepos+9, fnameend-fnamepos-9);
+
+			content = req.body.slice(emptypos+4, boundpos2-4);
+			break;
+		}
+	  }
+
+	  boundpos1 = boundpos2;
+	}
+
+	var path = relpath || '/';
+	var fpath = (path + '/' + fname).replace(/\/+/g, '/');
 
 	uploadFile(fpath, content, req.user.name);
 
