@@ -405,6 +405,20 @@ var putHandler = exports.putHandler = function(req) {
 			fname = discontent.substr(fnamepos+9, fnameend-fnamepos-9);
 
 			content = req.body.slice(emptypos+4, boundpos2-4);
+
+			var hcondis = req.headers['content-disposition'];
+			if(typeof hcondis == 'string') {
+				var hcondisarr = hcondis.split(';');
+				for(var x in hcondisarr) {
+					var findex = hcondisarr[x].indexOf('filename=');
+					if(findex >= 0) {
+						var fn = hcondisarr[x].substr(findex+9);
+						if(fn.indexOf('-chunking-')) {
+							fname = fn.replace(/"/g, '');
+						}
+					}
+				}
+			}
 			break;
 		}
 	  }

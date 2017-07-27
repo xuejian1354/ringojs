@@ -11,75 +11,7 @@ function getIndexViewRequest(action, data) {
 	  case 'all':
 		$('.main').html(getAllFilesXML(data.selectMenu.submenu.name, data.selectData));
 		updateActiveMenuBySelect(data.selectMenu);
-		$('#fileupload').fileupload({
-			url: '/index.html',
-			type: 'PUT',
-			dataType: 'json',
-			formData: {relpath: data.selectData.path},
-			/*add: function (e, data) {
-				data.submit();
-			},*/
-			done: function (e, fdata) {
-				$.each(fdata.result.files, function (index, file) {
-					console.log('Uploadfile Done: ' + JSON.stringify(file));
-				});
-				getIndexViewRequest('all', {path: data.selectData.path});
-			},
-			progressall: function (e, data) {
-				var progress = parseInt(data.loaded / data.total * 100, 10);
-				var bitrate = '';
-				if(data.bitrate < 1024*8) {
-				  bitrate = (data.bitrate/8).toFixed(2) + 'B';
-				}
-				else if(data.bitrate < 1024*1024*8) {
-				  bitrate = (data.bitrate/1024/8).toFixed(2) + 'KB';
-				}
-				else if(data.bitrate < 1024*1024*1024*8) {
-				  bitrate = (data.bitrate/1024/1024/8).toFixed(2) + 'MB';
-				}
-				else if(data.bitrate < 1024*1024*1024*1024*8) {
-				  bitrate = (data.bitrate/1024/1024/1024/8).toFixed(2) + 'G';
-				}
-
-				if(progress == 100) {
-				  $('#progress').addClass('hidden');
-				}
-				else {
-				  $('#progress').removeClass('hidden');
-				}
-
-				var barname = $('#progress .barname');
-				var barpercent = $('#progress .barpercent');
-				var bar = $('#progress .bar');
-
-				var name = '正在上传';
-				switch(barname.attr('index')) {
-				case '1':
-					name += '.&nbsp;&nbsp;&nbsp;&nbsp;';
-					barname.attr('index', '2');
-					break;
-
-				case '2':
-					name += '..&nbsp;&nbsp;&nbsp;';
-					barname.attr('index', '3');
-					break;
-
-				case '3':
-					name += '...&nbsp;&nbsp;';
-					barname.attr('index', '0');
-					break;
-
-				default:
-					name += '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
-					barname.attr('index', '1');
-					break;
-				}
-
-				barname.html(name + bitrate);
-				barpercent.text(progress + '%');
-				bar.css('width', progress + '%');
-			}
-		});
+		fileUploadSetting(data.selectData.path);
 		break;
 
 	case 'resetpass':
@@ -111,6 +43,85 @@ function updateActiveMenuBySelect(selectMenu) {
   $('#me'+selectMenu.action).addClass('active');
   $('#sm'+selectMenu.submenu.action).addClass('active');
   $('#ss'+selectMenu.submenu.action).addClass('active');
+}
+
+function fileUploadSetting(path) {
+	$('#fileupload').fileupload({
+		url: '/index.html',
+		type: 'PUT',
+		dataType: 'json',
+		maxChunkSize: 2097152, // 2MB
+		formData: {relpath: path},
+		/*add: function (e, data) {
+			data.submit();
+		},*/
+		done: function (e, fdata) {
+			$.each(fdata.result.files, function (index, file) {
+				//console.log('Uploadfile Done: ' + JSON.stringify(file));
+			});
+			getIndexViewRequest('all', {path: path});
+		},
+		progressall: function (e, data) {
+			var progress = parseInt(data.loaded / data.total * 100, 10);
+			var bitrate = '';
+			if(data.bitrate < 1024*8) {
+			  bitrate = (data.bitrate/8).toFixed(2) + 'B/s';
+			}
+			else if(data.bitrate < 1024*1024*8) {
+			  bitrate = (data.bitrate/1024/8).toFixed(2) + 'KB/s';
+			}
+			else if(data.bitrate < 1024*1024*1024*8) {
+			  bitrate = (data.bitrate/1024/1024/8).toFixed(2) + 'MB/s';
+			}
+			else if(data.bitrate < 1024*1024*1024*1024*8) {
+			  bitrate = (data.bitrate/1024/1024/1024/8).toFixed(2) + 'G/s';
+			}
+
+			if(progress == 100) {
+			  $('#progress').addClass('hidden');
+			}
+			else {
+			  $('#progress').removeClass('hidden');
+			}
+
+			var barname = $('#progress .barname');
+			var barpercent = $('#progress .barpercent');
+			var bar = $('#progress .bar');
+
+			var name = '正在上传';
+			switch(barname.attr('index')) {
+			case '1':
+				name += '.&nbsp;&nbsp;&nbsp;&nbsp;';
+				barname.attr('index', '2');
+				break;
+
+			case '2':
+				name += '..&nbsp;&nbsp;&nbsp;';
+				barname.attr('index', '3');
+				break;
+
+			case '3':
+				name += '...&nbsp;&nbsp;';
+				barname.attr('index', '0');
+				break;
+
+			default:
+				name += '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
+				barname.attr('index', '1');
+				break;
+			}
+
+			barname.html(name + bitrate);
+			barpercent.text(progress + '%');
+			bar.css('width', progress + '%');
+		}
+	})
+	.on('fileuploadchunksend', function (e, data) {
+		var chunktotal = Math.ceil(data.total/data.maxChunkSize);
+		var chunknum = Math.floor(parseInt(data.contentRange.split('-')[0].substr(6))/data.maxChunkSize);
+
+		data.headers['Content-Disposition'] = 'attachment; filename="' + data.files[0].name + '-chunking-' + chunktotal + '-' + chunknum + '"';
+	});
 }
 
 function getAllFilesXML(title, selectData) {
@@ -501,6 +512,7 @@ function removeFile(url, path) {
     if(status == 'success') {
 	  $('.main').html(getAllFilesXML(data.selectMenu.submenu.name, data.selectData));
 	  updateActiveMenuBySelect(data.selectMenu);
+	  fileUploadSetting(data.selectData.path);
 	}
 	else {
 	  alert('文件删除失败！');
@@ -540,6 +552,7 @@ function filesToQueryFolder(url) {
 	  if(status == 'success') {
 		$('.main').html(getAllFilesXML(data.selectMenu.submenu.name, data.selectData));
 	    updateActiveMenuBySelect(data.selectMenu);
+		fileUploadSetting(data.selectData.path);
 	  }
 	}
   );
