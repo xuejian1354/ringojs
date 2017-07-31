@@ -135,16 +135,14 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 		case '404':
 			return res.setStatus(rescon.code).xml(rescon.context);
 
-		case 'text/plain':
-			return res.setStatus(rescon.code).text(rescon.context);
-
 		default:
-			if(rescon.type && rescon.type.indexOf('image/') == 0) {
-				return res.setStatus(rescon.code).addHeaders(rescon.headers).binary(rescon.context.toByteString(), rescon.type);
+			if(rescon.type 
+			  && (rescon.type.indexOf('text/plain') == 0
+			    || rescon.type.indexOf('image/') == 0
+				|| rescon.type.indexOf('application/') == 0)) {
+				return res.setStatus(rescon.code).stream(rescon.stream, rescon.type);
 			}
-			else if(rescon.type && rescon.type.indexOf('application/') == 0) {
-				return res.setStatus(rescon.code).addHeaders(rescon.headers).binary(rescon.context.toByteString(), rescon.type);
-			}
+
 			return res.setStatus(rescon.code);
 		}
 	};
@@ -379,24 +377,10 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 		//return fs.read(config.get("configHome")+"/controller/test.xml", "r");
 	}
 
-	function getFileContent(fileinfo) {
-		if(fileinfo.type == '-') {
-			switch(fileinfo.mime) {
-			case 'text/plain':
-				return fs.read(fileinfo.path, 'r');
-
-			default:
-				return fs.read(fileinfo.path, 'rb');
-			}
-		}
-
-		return null;
-	}
-
 	function getFileContentToReturnCode(fileinfo) {
-		var context = getFileContent(fileinfo);
-		if(context) {
-			return {type: fileinfo.mime, code: 200, headers: {'Content-Length': fileinfo.size}, context: context};
+		var stream = fs.open(fileinfo.path, 'rb');
+		if(stream) {
+			return {type: fileinfo.mime, code: 200, stream: stream};
 		}
 		else {
 			return {code: 404};
