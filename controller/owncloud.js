@@ -209,7 +209,21 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 		var reqpath = datahome + fpath;
 		log.info('reqpath: ' + reqpath);
 
-		if(fs.isDirectory(reqpath)) {
+		if(fs.isFile(reqpath)) {
+			var fileinfo = {
+				name: fpath,
+				type: '-',
+				mime: mime.mimeType(fpath),
+				path: reqpath,
+				url: (baseurl+fpath).replace(/\/{2,}/g, "/"),
+				size: fs.size(reqpath),
+				date: fs.lastModified(reqpath)
+			};
+
+			//log.info('fileinfo: ' + JSON.stringify(fileinfo));
+			return [fileinfo];
+		}
+		else if(fs.isDirectory(reqpath)) {
 			var filesinfo = [{
 				name: fpath,
 				type: 'd',
@@ -247,20 +261,6 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 
 			//log.info('filesinfo: ' + JSON.stringify(filesinfo));
 			return filesinfo;
-		}
-		else if(fs.isFile(reqpath)) {
-			var fileinfo = {
-				name: fpath,
-				type: '-',
-				mime: mime.mimeType(fpath),
-				path: reqpath,
-				url: (baseurl+fpath).replace(/\/{2,}/g, "/"),
-				size: fs.size(reqpath),
-				date: fs.lastModified(reqpath)
-			};
-
-			//log.info('fileinfo: ' + JSON.stringify(fileinfo));
-			return [fileinfo];
 		}
 		else if(!fs.exists(reqpath) && fpath == '/') {
 			fs.makeDirectory(reqpath);
@@ -407,8 +407,12 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 var uploadFile = exports.uploadFile = function (fpath, content, username) {
 	var fsstol = 1;
 	var fsscur = 0;
+
 	var fname = fpath.split('/')
 	fname = fname[fname.length-1];
+
+	log.info('PUT ' + fpath);
+
 	var chunkloc = fname.indexOf('-chunking-');
 	if(chunkloc > 0) {
 		var fss = fname.split('-');
@@ -436,7 +440,7 @@ var uploadFile = exports.uploadFile = function (fpath, content, username) {
 		}
 	}
 
-	log.info('reqpath: ' + reqpath);
+	//log.info('reqpath: ' + reqpath);
 
 	if(fsscur == 0) {
 		  fs.write(reqpath, content);

@@ -7,6 +7,25 @@ var config = require("../config");
 
 exports.middleware = function baseauth(next, app) {
 
+	function getAuthkeyFromCookie(req) {
+		var authKey = false;
+
+		var cookiearr =[];
+		if(req.headers.cookie) {
+			cookiearr = req.headers.cookie.split(';');
+		}
+
+		for(var x in cookiearr) {
+			var xval = cookiearr[x].trim();
+			if(xval.indexOf('authKey=') == 0) {
+				authKey = xval.substr(8);
+				break;
+			}
+		}
+
+		return authKey;
+	}
+
     return function baseauth(request) {
 
 		if(strings.startsWith(request.pathInfo, config.get('ownbaseurl'))) {
@@ -21,7 +40,7 @@ exports.middleware = function baseauth(next, app) {
 				authorization = authorization.substr(authorization.indexOf('Basic')+6).trim();
 			}
 
-			var user = getUserFromAuthKey(authorization);
+			var user = getUserFromAuthKey(authorization) || getUserFromAuthKey(getAuthkeyFromCookie(request));
 			if(user) {
 				request.user = user;
 				auth = true;
@@ -46,41 +65,12 @@ exports.middleware = function baseauth(next, app) {
 		}
 		else if(strings.startsWith(request.pathInfo, '/login.html')
 			|| strings.startsWith(request.pathInfo, '/register.html')) {
-			var authKey = false;
-
-			var cookiearr =[];
-			if(request.headers.cookie) {
-				cookiearr = request.headers.cookie.split(';');
-			}
-
-			for(var x in cookiearr) {
-				var xval = cookiearr[x].trim();
-				if(xval.indexOf('authKey=') == 0) {
-					authKey = xval.substr(8, 16);
-					break;
-				}
-			}
-
-			if(getUserFromAuthKey(authKey)) {
+			if(getUserFromAuthKey(getAuthkeyFromCookie(request))) {
 				return response.redirect('/index.html');
 			}
 		}
 		else if(strings.startsWith(request.pathInfo, '/index.html')) {
-			var authKey = false;
-			var cookiearr = [];
-			if(request.headers.cookie) {
-				cookiearr = request.headers.cookie.split(';');
-			}
-
-			for(var x in cookiearr) {
-				var xval = cookiearr[x].trim();
-				if(xval.indexOf('authKey=') == 0) {
-					authKey = xval.substr(8);
-					break;
-				}
-			}
-
-			var user = getUserFromAuthKey(authKey);
+			var user = getUserFromAuthKey(getAuthkeyFromCookie(request));
 			if(user) {
 				request.user = user;
 			}

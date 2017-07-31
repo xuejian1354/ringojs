@@ -50,7 +50,7 @@ function fileUploadSetting(path) {
 		url: '/index.html',
 		type: 'PUT',
 		dataType: 'json',
-		maxChunkSize: 2097152, // 2MB
+		maxChunkSize: 1048576, // 1MB
 		formData: {relpath: path},
 		/*add: function (e, data) {
 			data.submit();
@@ -407,24 +407,16 @@ function getCheckPath() {
 }
 
 function downloadToOpt(srcarr) {
+  var save_link = window.document.createElementNS("http://www.w3.org/1999/xhtml", "a")
+  var event = new MouseEvent("click");
+
   for(var x in srcarr) {
     var path = decodeURIComponent(srcarr[x]);
 	var fname = path.split('/').pop();
 
-	var xhr = new XMLHttpRequest();
-    xhr.open('GET', '/owncloud/remote.php/webdav' + path, true);
-	var authKey = getCookie('authKey');
-	if(authKey) {
-      xhr.setRequestHeader("Authorization", authKey);
-	}
-	xhr.responseType = 'blob';
-    xhr.onload = function() {
-	  if (this.status == 200) {
-		var blob = this.response;
-		saveAs(blob, fname);
-	  }
-	}
-	xhr.send();
+    save_link.href = '/owncloud/remote.php/webdav' + path;
+    save_link.download = fname;
+    save_link.dispatchEvent(event);
   }
 }
 

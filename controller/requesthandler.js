@@ -415,6 +415,7 @@ var putHandler = exports.putHandler = function(req) {
 						var fn = hcondisarr[x].substr(findex+9);
 						if(fn.indexOf('-chunking-')) {
 							fname = fn.replace(/"/g, '');
+							break;
 						}
 					}
 				}
