@@ -24,7 +24,7 @@ module.exports = function(app) {
 			log.info("Return: 200\n");
 
 			if(req.query.action == 'auth') {
-				var authKey = base64.encode(req.query.user + ':' + req.query.password);
+				var authKey = base64.encode(req.query.cellphone + ':' + req.query.password);
 				if(getUserFromAuthKey(authKey)) {
 					return response.setStatus(303).addHeaders({
 						"location": '/index.html',
@@ -40,7 +40,7 @@ module.exports = function(app) {
 
 			var context = {title: menuconfig.get('title')};
 			if(req.query.error) {
-				context.error = 'User or Password error';
+				context.error = 'CellPhone or Password error';
 			}
 
 			return templates.renderResponse('login.html', context);
@@ -50,9 +50,9 @@ module.exports = function(app) {
 			log.info("Return: 200\n");
 
 			if(req.query.action == 'auth') {
-				var authKey = base64.encode(req.query.user + ':' + req.query.password);
+				var authKey = base64.encode(req.query.cellphone + ':' + req.query.password);
 				if(req.query.password == req.query.repassword
-					&& addUserToDB(req.query.user, req.query.password)) {
+					&& addUserToDB(req.query.cellphone, req.query.password)) {
 					return response.setStatus(303).addHeaders({
 						"location": '/index.html',
 						"set-cookie": [setCookie('authKey', authKey, -1)]
@@ -77,7 +77,7 @@ module.exports = function(app) {
 
 			var httphandler = new HttpHandler(req);
 			if(req.user) {
-				var authKey = base64.encode(req.user.name + ':' + req.user.password);
+				var authKey = base64.encode(req.user.cellphone + ':' + req.user.password);
 				//httphandler.addCookie('authKey', authKey, 0.01);
 			}
 

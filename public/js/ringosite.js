@@ -15,7 +15,7 @@ function getIndexViewRequest(action, data) {
 		break;
 
 	case 'resetpass':
-		$('.main').html(getResetPassXML(data.selectMenu.submenu.name, data.username));
+		$('.main').html(getResetPassXML(data.selectMenu.submenu.name, data.cellphone));
 		updateActiveMenuBySelect(data.selectMenu);
 		break;
 
@@ -258,7 +258,7 @@ function getAllFilesXML(title, selectData) {
   return filesXml;
 }
 
-function getResetPassXML(title, username) {
+function getResetPassXML(title, cellphone) {
   var resetXml = '<h2>' + title + '</h2><hr>';
 
   resetXml += '<div style="padding: 5px 20%">'
@@ -270,7 +270,7 @@ function getResetPassXML(title, username) {
 	  + '<span class="glyphicon glyphicon-exclamation-sign" style="font-size: 15px; color: #a00;"></span>'
 	  + '<span>密码修改失败</span>'
 	+ '</p></div>'
-	  + '<input id="username" type="hidden" name="username" value="' + username + '">'
+	  + '<input id="cellphone" type="hidden" name="cellphone" value="' + cellphone + '">'
       + '<div class="form-group has-feedback">'
         + '<input id="password" type="password" class="form-control" placeholder="Password" name="password">'
         + '<span class="glyphicon glyphicon-lock form-control-feedback"></span>'
@@ -561,7 +561,7 @@ function ResetPassRequest(url) {
 
 	$.post(url, {
 		opt: 'resetpass',
-		username: $('#username').val(),
+		cellphone: $('#cellphone').val(),
 		password: $('#password').val(),
 		newpassword: $('#newpassword').val()
 	  },

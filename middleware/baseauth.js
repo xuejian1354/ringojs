@@ -10,7 +10,7 @@ exports.middleware = function baseauth(next, app) {
 	function getAuthkeyFromCookie(req) {
 		var authKey = false;
 
-		var cookiearr =[];
+		var cookiearr = [];
 		if(req.headers.cookie) {
 			cookiearr = req.headers.cookie.split(';');
 		}

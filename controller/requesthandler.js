@@ -13,14 +13,32 @@ var config = require("../config");
 var menuconfig = require("gestalt").load(module.resolve("../config/menu.json"));
 var log = require("ringo/logging").getLogger(module.id);
 
+const MAPPING_GATEWAY = {
+	'table': 'oc_gateway',
+	'properties':{
+		'key': 'string',
+		'val': 'string'
+	}
+};
+
 const MAPPING_USER = {
 	'table': 'oc_users',
 	'id': {
 		'column': 'user_id'
 	},
 	'properties':{
+		'cellphone': {
+			'type': 'string',
+			'length': '16',
+			'nullable': false,
+			'unique': true
+		},
 		'name': 'string',
-		'password': 'string'
+		'password': 'string',
+		'authority': 'string',
+		'status': 'string',
+		'icon': 'string',
+		'update_at': 'timestamp'
 	}
 };
 
@@ -55,7 +73,7 @@ HttpHandler.prototype.response = function(templates) {
 		//selectData: this.selectData,
 		mconfig: this.mconfig,
 		user: this.request.user,
-		authKey: base64.encode(this.request.user.name + ':' + this.request.user.password),
+		authKey: base64.encode(this.request.user.cellphone + ':' + this.request.user.password),
 		query: this.request.query
 	});
 
@@ -65,8 +83,8 @@ HttpHandler.prototype.response = function(templates) {
 	return restemp;
 }
 
-HttpHandler.prototype.addCookie = function(name, value, duration) {
-	this.cookie = setCookie(name, value, duration);
+HttpHandler.prototype.addCookie = function(cellphone, value, duration) {
+	this.cookie = setCookie(cellphone, value, duration);
 	return this;
 }
 
@@ -115,15 +133,15 @@ function getSelectMenuByAction(menus, action) {
 
 function getDataByRequest(req) {
 	switch(req.query.action) {
-	case 'all': return getSelectFiles(req.query.path, req.user.name);
+	case 'all': return getSelectFiles(req.query.path, req.user.cellphone);
 	}
 
 	return null;
 }
 
-function getSelectFiles(path, name) {
+function getSelectFiles(path, cellphone) {
 	var locpath = path || '/';
-	var homepath = config.get('datapath') + '/' + name + '/files';
+	var homepath = config.get('datapath') + '/' + cellphone + '/files';
 	if(!fs.exists(homepath)) {
 		fs.makeTree(homepath);
 	}
@@ -244,12 +262,12 @@ var postHandler = exports.postHandler = function(req) {
 		switch(req.params.action) {
 		case 'pan':
 		case 'all':
-			retdata.selectData = getSelectFiles(req.params.path, req.user.name);
+			retdata.selectData = getSelectFiles(req.params.path, req.user.cellphone);
 			break;
 
 		case 'more':
 		case 'resetpass':
-			retdata.username = req.user.name;
+			retdata.cellphone = req.user.cellphone;
 			break;
 
 		case 'logout':
@@ -260,7 +278,7 @@ var postHandler = exports.postHandler = function(req) {
 
 	case 'newfolder':
 		var locpath = req.params.path || '/';
-		var abspath = config.get('datapath') + '/' + req.user.name + '/files' + locpath;
+		var abspath = config.get('datapath') + '/' + req.user.cellphone + '/files' + locpath;
 		var newFolder = createNewFolderInPath(abspath);
 		if(newFolder) {
 			return response.setStatus(201).json({folder: newFolder, date: dates.format(new Date(), 'yyyy-MM-dd')});
@@ -271,7 +289,7 @@ var postHandler = exports.postHandler = function(req) {
 
 	case 'renamefile':
 		var locpath = req.params.path || '/';
-		var abspath = config.get('datapath') + '/' + req.user.name + '/files' + locpath;
+		var abspath = config.get('datapath') + '/' + req.user.cellphone + '/files' + locpath;
 		var ret = renameNewFolderInPath(abspath, req.params.file, req.params.newfile);
 		if(ret == 0) {
 			return response.setStatus(200);
@@ -294,7 +312,7 @@ var postHandler = exports.postHandler = function(req) {
 
 		var retpath = '/';
 		for(var x in reqpaths) {
-			var abspath = (config.get('datapath') + '/' + req.user.name + '/files/' + decodeURIComponent(reqpaths[x])).replace(/\/{2,}/g, "/");
+			var abspath = (config.get('datapath') + '/' + req.user.cellphone + '/files/' + decodeURIComponent(reqpaths[x])).replace(/\/{2,}/g, "/");
 			removeFileFromPath(abspath);
 			retpath = fs.directory(decodeURIComponent(reqpaths[x]));
 		}
@@ -306,7 +324,7 @@ var postHandler = exports.postHandler = function(req) {
 
 	case 'getfolders':
 		var locpath = req.params.path || '/';
-		var abspath = config.get('datapath') + '/' + req.user.name + '/files' + locpath;
+		var abspath = config.get('datapath') + '/' + req.user.cellphone + '/files' + locpath;
 		var folders = getFoldersInPath(abspath);
 		if(folders) {
 			return response.setStatus(200).json({folders: folders});
@@ -319,8 +337,8 @@ var postHandler = exports.postHandler = function(req) {
 	case 'copyfile':
 	    var srcs = JSON.parse(req.params.srcarr);
 		for(var x in srcs) {
-			var srcpath = config.get('datapath') + '/' + req.user.name + '/files' + decodeURIComponent(srcs[x]);
-			var tarpath = config.get('datapath') + '/' + req.user.name + '/files' + req.params.target;
+			var srcpath = config.get('datapath') + '/' + req.user.cellphone + '/files' + decodeURIComponent(srcs[x]);
+			var tarpath = config.get('datapath') + '/' + req.user.cellphone + '/files' + req.params.target;
 
 			if(fs.exists(srcpath) && fs.isDirectory(tarpath)) {
 				if(req.params.opt == 'movefile') {
@@ -338,8 +356,8 @@ var postHandler = exports.postHandler = function(req) {
 		return postHandler(req);
 
 	case 'resetpass':
-		if(updateUserPass(req.params.username, req.params.password, req.params.newpassword)) {
-			var authKey = base64.encode(req.params.username + ':' + req.params.newpassword);
+		if(updateUserPass(req.params.cellphone, req.params.password, req.params.newpassword)) {
+			var authKey = base64.encode(req.params.cellphone + ':' + req.params.newpassword);
 			return response.setStatus(200).json({status: 'success', authKey: authKey});
 		}
 		else {
@@ -430,7 +448,7 @@ var putHandler = exports.putHandler = function(req) {
 	var path = relpath || '/';
 	var fpath = (path + '/' + fname).replace(/\/+/g, '/');
 
-	uploadFile(fpath, content, req.user.name);
+	uploadFile(fpath, content, req.user.cellphone);
 
 	return response.setStatus(200).json({
 	  "files": [
@@ -527,7 +545,7 @@ var getUserFromAuthKey = exports.getUserFromAuthKey = function(authorization) {
 		var User = store.defineEntity("User", MAPPING_USER);
 		store.syncTables();
 
-		var queryret = store.query("from User where name='" + credentials[0] + "' and password='" + passcode + "'");
+		var queryret = store.query("from User where cellphone='" + credentials[0] + "' and password='" + passcode + "'");
 		if(queryret.length > 0) {
 			var useret = queryret[0];
 			useret.password = credentials[1];
@@ -541,7 +559,7 @@ var getUserFromAuthKey = exports.getUserFromAuthKey = function(authorization) {
 
 		while(authKey) {
 			if(authKey.indexOf(authorization) >= 0) {
-				return {name:credentials[0], password: credentials[1]};
+				return {cellphone:credentials[0], password: credentials[1]};
 			}
 
 			authKey = txtStream.readLine().trim();
@@ -551,7 +569,7 @@ var getUserFromAuthKey = exports.getUserFromAuthKey = function(authorization) {
 	return false;
 }
 
-var addUserToDB = exports.addUserToDB = function(name, password) {
+var addUserToDB = exports.addUserToDB = function(cellphone, password) {
 
 	if(config.get('dbsupport') == 'db') {
 		var passcode = strings.digest(password, 'MD5');
@@ -567,25 +585,25 @@ var addUserToDB = exports.addUserToDB = function(name, password) {
 		var User = store.defineEntity("User", MAPPING_USER);
 		store.syncTables();
 
-		var queryret = store.query("from User where name='" + name + "' and password='" + passcode + "'");
+		var queryret = store.query("from User where cellphone='" + cellphone + "' and password='" + passcode + "'");
 		if(queryret.length > 0) {
 			return false;
 		}
 
 		var transaction = store.beginTransaction();
-		var newuser = new User({"name": name, "password": passcode});
+		var newuser = new User({"cellphone": cellphone, "password": passcode});
 		newuser.save();
 		transaction.commit();
 	}
 	else if(config.get('dbsupport') == 'file') {
-		var authorization = base64.encode(name + ':' + password);
+		var authorization = base64.encode(cellphone + ':' + password);
 
 		var inStream = fs.open(config.get('database'), 'r');
 		var authKey = inStream.readLine().trim();
 
 		while(authKey) {
 			var credentials = base64.decode(authKey).split(':');
-			if(name == credentials[0]) {
+			if(cellphone == credentials[0]) {
 				return false;
 			}
 
@@ -599,7 +617,7 @@ var addUserToDB = exports.addUserToDB = function(name, password) {
 	return true;
 }
 
-var updateUserPass = exports.updateUserPass = function(name, pass, newpass) {
+var updateUserPass = exports.updateUserPass = function(cellphone, pass, newpass) {
 
 	var auth = false;
 	if(config.get('dbsupport') == 'db') {
@@ -617,7 +635,7 @@ var updateUserPass = exports.updateUserPass = function(name, pass, newpass) {
 		var User = store.defineEntity("User", MAPPING_USER);
 		store.syncTables();
 
-		var queryret = store.query("from User where name='" + name + "' and password='" + passcode + "'");
+		var queryret = store.query("from User where cellphone='" + cellphone + "' and password='" + passcode + "'");
 		if(queryret.length > 0) {
 			var upuser = User.get(queryret[0].id);
 			upuser.password = newpasscode;
@@ -632,8 +650,8 @@ var updateUserPass = exports.updateUserPass = function(name, pass, newpass) {
 		var rows = inStream.readLines();
 
 		for(var x in rows) {
-			var authKey = base64.encode(name + ':' + pass);
-			var newKey = base64.encode(name + ':' + newpass);
+			var authKey = base64.encode(cellphone + ':' + pass);
+			var newKey = base64.encode(cellphone + ':' + newpass);
 			if(rows[x].trim().indexOf(authKey) >= 0) {
 				auth = true;
 				rows[x] = newKey;

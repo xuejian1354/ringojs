@@ -36,8 +36,8 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 		case '/ocs/v1.php/cloud/user':
 			if(req.query.format == 'json') {
 				var usercontext = owndata.get('usercontext');
-				usercontext.ocs.data['id'] = req.user.name;
-				usercontext.ocs.data['display-name'] = req.user.name;
+				usercontext.ocs.data['id'] = req.user.cellphone;
+				usercontext.ocs.data['display-name'] = req.user.cellphone;
 				return {type: 'json', code: 200, context: usercontext};
 			}
 
@@ -106,7 +106,7 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 				return {type: 'image/png', code: 200, headers: {'Content-Length': fs.size(thumbimg)}, context: fs.read(thumbimg, 'rb')};
 			}
 			else if(reqpath.indexOf('/index.php/avatar') == 0) {
-				return {type: 'json', code: 200, context: {"data": {"displayname": req.user.name}}};
+				return {type: 'json', code: 200, context: {"data": {"displayname": req.user.cellphone}}};
 			}
 			break;
 		}
@@ -154,7 +154,7 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 
 		var fpath = req.pathInfo.substr((baseurl+davpath).length) || '/';
 
-		var datahome = config.get('datapath') + '/' + req.user.name + '/files';
+		var datahome = config.get('datapath') + '/' + req.user.cellphone + '/files';
 		var reqpath = datahome + fpath;
 		//log.info('reqpath: ' + reqpath);
 
@@ -203,7 +203,7 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 	function getFilesInfo(fpath){
 		var baseurl = config.get('ownbaseurl') + '/remote.php/webdav/';
 
-		var datahome = config.get('datapath') + '/' + req.user.name + '/files';
+		var datahome = config.get('datapath') + '/' + req.user.cellphone + '/files';
 		var reqpath = datahome + fpath;
 		log.info('reqpath: ' + reqpath);
 
@@ -270,7 +270,7 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 	function mkDir(dpath) {
 		var baseurl = config.get('ownbaseurl') + '/remote.php/webdav/';
 
-		var datahome = config.get('datapath') + '/' + req.user.name + '/files';
+		var datahome = config.get('datapath') + '/' + req.user.cellphone + '/files';
 		var reqpath = datahome + dpath;
 		log.info('reqpath: ' + reqpath);
 
@@ -282,7 +282,7 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 	function rmFile(fpath) {
 		var baseurl = config.get('ownbaseurl') + '/remote.php/webdav/';
 
-		var datahome = config.get('datapath') + '/' + req.user.name + '/files';
+		var datahome = config.get('datapath') + '/' + req.user.cellphone + '/files';
 		var reqpath = datahome + fpath;
 		log.info('reqpath: ' + reqpath);
 
@@ -294,7 +294,7 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 	function findFile(fpath) {
 		var baseurl = config.get('ownbaseurl') + '/remote.php/webdav/';
 
-		var datahome = config.get('datapath') + '/' + req.user.name + '/files';
+		var datahome = config.get('datapath') + '/' + req.user.cellphone + '/files';
 		var reqpath = datahome + fpath;
 		log.info('reqpath: ' + reqpath);
 
@@ -309,7 +309,7 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 	function moveFile(source, target) {
 		var baseurl = config.get('ownbaseurl') + '/remote.php/webdav/';
 
-		var datahome = config.get('datapath') + '/' + req.user.name + '/files';
+		var datahome = config.get('datapath') + '/' + req.user.cellphone + '/files';
 		var reqsrc = datahome + source;
 		var reqtar = datahome + target;
 		log.info('move: ' + reqsrc + ' To ' + reqtar);
@@ -322,7 +322,7 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 	function copyFile(source, target) {
 		var baseurl = config.get('ownbaseurl') + '/remote.php/webdav/';
 
-		var datahome = config.get('datapath') + '/' + req.user.name + '/files';
+		var datahome = config.get('datapath') + '/' + req.user.cellphone + '/files';
 		var reqsrc = datahome + source;
 		var reqtar = datahome + target;
 		log.info('copy: ' + reqsrc + ' To ' + reqtar);
@@ -333,7 +333,7 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 	}
 
 	function putFile(fpath, content, totallen) {
-		uploadFile(fpath, content, req.user.name);
+		uploadFile(fpath, content, req.user.cellphone);
 	}
 
 	function genDavXML(infos) {
@@ -388,7 +388,7 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 	}
 }
 
-var uploadFile = exports.uploadFile = function (fpath, content, username) {
+var uploadFile = exports.uploadFile = function (fpath, content, cellphone) {
 	var fsstol = 1;
 	var fsscur = 0;
 
@@ -409,7 +409,7 @@ var uploadFile = exports.uploadFile = function (fpath, content, username) {
 	}
 	//log.info('----->>> fname: ' + fname + ', fsstol: ' + fsstol + ', fsscur: ' + fsscur);
 
-	var datahome = config.get('datapath') + '/' + username + '/files';
+	var datahome = config.get('datapath') + '/' + cellphone + '/files';
 	var reqpath = datahome + fpath;
 
 	if(fsstol == 1) {
