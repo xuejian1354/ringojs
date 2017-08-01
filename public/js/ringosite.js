@@ -197,7 +197,15 @@ function getAllFilesXML(title, selectData) {
 	  + '<td>'
 	  + '<div class="ringo-moreopt-nav">'
 	    + '<a><span title="分享" class="glyphicon glyphicon-share" style="margin: 0 2px;"></span></a>'
-	    + '<a href="javascript:downloadToOpt([\'' + files[x].path + '\']);" class="downlink">'
+	    + '<a ';
+
+		if (files[x].type == '-') {
+			filesXml += 'href="javascript:downloadToOpt([\'' + files[x].path + '\'])"'
+		} else {
+			filesXml += 'href="javascript:void(0)"';
+		}
+
+		filesXml += ' class="downlink">'
 		  + '<span title="下载" class="glyphicon glyphicon-download-alt" style="margin: 0 2px;"></span>'
 		+ '</a>'
 		+ '<div class="dropdown" style="margin: 0 2px; float: right;">'

@@ -18,10 +18,6 @@
 		  "action": "document"
 		},
 		{
-		  "name": "种子",
-		  "action": "bittorrent"
-		},
-		{
 		  "name": "音乐",
 		  "action": "music"
 		},
@@ -32,10 +28,6 @@
 		{
 		  "name": "我的分享",
 		  "action": "myshare"
-		},
-		{
-		  "name": "回收站",
-		  "action": "recycle"
 		}
 	  ]
     },
@@ -53,6 +45,10 @@
 	  "name": "更多",
 	  "action": "more",
 	  "submenu": [
+		{
+		  "name": "用户信息",
+		  "action": "user"
+		},
 		{
 		  "name": "密码修改",
 		  "action": "resetpass"
