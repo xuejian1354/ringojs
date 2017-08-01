@@ -140,7 +140,7 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 			  && (rescon.type.indexOf('text/plain') == 0
 			    || rescon.type.indexOf('image/') == 0
 				|| rescon.type.indexOf('application/') == 0)) {
-				return res.setStatus(rescon.code).stream(rescon.stream, rescon.type);
+				return res.setStatus(rescon.code).addHeaders(rescon.headers).stream(rescon.stream, rescon.type);
 			}
 
 			return res.setStatus(rescon.code);
@@ -380,7 +380,7 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 	function getFileContentToReturnCode(fileinfo) {
 		var stream = fs.open(fileinfo.path, 'rb');
 		if(stream) {
-			return {type: fileinfo.mime, code: 200, stream: stream};
+			return {type: fileinfo.mime, code: 200, headers: {'Content-Length': fileinfo.size}, stream: stream};
 		}
 		else {
 			return {code: 404};
