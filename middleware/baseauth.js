@@ -69,7 +69,8 @@ exports.middleware = function baseauth(next, app) {
 				return response.redirect('/index.html');
 			}
 		}
-		else if(strings.startsWith(request.pathInfo, '/index.html')) {
+		else if(strings.startsWith(request.pathInfo, '/index.html')
+			|| strings.startsWith(request.pathInfo, '/usericon')) {
 			var user = getUserFromAuthKey(getAuthkeyFromCookie(request));
 			if(user) {
 				request.user = user;

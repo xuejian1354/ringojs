@@ -14,6 +14,12 @@ function getIndexViewRequest(action, data) {
 		fileUploadSetting(data.selectData.path);
 		break;
 
+	case 'user':
+		$('.main').html(getUserInfoXML(data.selectMenu.submenu.name, data.name));
+		updateActiveMenuBySelect(data.selectMenu);
+		imageUploadSetting();
+		break;
+
 	case 'resetpass':
 		$('.main').html(getResetPassXML(data.selectMenu.submenu.name, data.cellphone));
 		updateActiveMenuBySelect(data.selectMenu);
@@ -114,6 +120,28 @@ function fileUploadSetting(path) {
 			barname.html(name + bitrate);
 			barpercent.text(progress + '%');
 			bar.css('width', progress + '%');
+		}
+	})
+	.on('fileuploadchunksend', function (e, data) {
+		var chunktotal = Math.ceil(data.total/data.maxChunkSize);
+		var chunknum = Math.floor(parseInt(data.contentRange.split('-')[0].substr(6))/data.maxChunkSize);
+
+		data.headers['Content-Disposition'] = 'attachment; filename="' + data.files[0].name + '-chunking-' + chunktotal + '-' + chunknum + '"';
+	});
+}
+
+function imageUploadSetting() {
+	$('#imgupload').fileupload({
+		url: '/index.html',
+		type: 'PUT',
+		dataType: 'json',
+		acceptFileTypes: /(\.|\/)(gif|jpe?g|png)$/i,
+		maxFileSize: 5 * 1024 * 1024,
+		minFileSize: 512,
+		maxChunkSize: 1048576, // 1MB
+		formData: {upimg: 'usericon'},
+		done: function (e, fdata) {
+			getIndexViewRequest('user');
 		}
 	})
 	.on('fileuploadchunksend', function (e, data) {
@@ -294,9 +322,38 @@ function getResetPassXML(title, cellphone) {
   return resetXml;
 }
 
+function getUserInfoXML(title, name) {
+  if(!name) {
+    name = '';
+  }
+
+  var resetXml = '<h2>' + title + '</h2><hr>';
+
+  resetXml += '<div><img src="/usericon?' + Math.random() + '" style="width: 120px; height: 120px;"><button onclick="javascript:uploadFileDialog()" class="btn btn-link">更改头像</button><input id="imgupload" name="files[]" type="file" accept="image/gif, image/jpeg, image/png" multiple style="display: none;"><br><div id="unedt"><div style="border: 1px; padding: 9px 12px; width: 120px; float: left; text-align: center;">昵称：' + name + '</div><button onclick="javascript:setUserName(\'' + name + '\')" class="btn btn-link" style="float: left;">修改</button></div></div>';
+
+  return resetXml;
+}
+
 function getDefaultXML(title) {
   var defaultXml = '<h2>' + title + '</h2><hr>';
   return defaultXml;
+}
+
+function setUserName(name) {
+  $('#unedt').html('<div style="border: 1px; padding: 6px 12px; float: left;">昵称：<input id="nameval" type="text" value="' + name + '" onblur="javascript:setUserNameReq()" style="width: 80px;"></div>');
+  $('#nameval').focus();
+}
+
+function setUserNameReq() {
+  var name = $('#nameval').val();
+
+  $('#unedt').html('<div style="border: 1px; padding: 9px 12px; width: 120px; float: left; text-align: center;">昵称：' + name + '</div><button onclick="javascript:setUserName(\'' + name + '\')" class="btn btn-link" style="float: left;">修改</button>');
+
+  $.post('/index.html', {opt: 'renameuser', name: name}, function (data, status) {
+	  if(status == 'success') {
+		  $('#user-info').text(name);
+	  }
+  });
 }
 
 function createNewFolder(url, path) {

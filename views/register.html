@@ -45,5 +45,13 @@
     </form>
   </div>
 </div>
+{% if authority == 'admin' %}
+<script>
+$(function(){
+  alert('系统中还没有管理员，该用户默认为管理员用户');
+  window.location.href='/login.html?action=auth&cellphone={{ query.cellphone }}&password={{ query.password }}';
+})
+</script>
+{% endif %}
 </body>
 </html>

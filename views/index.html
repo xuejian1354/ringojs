@@ -44,7 +44,7 @@
       </div>
       {% endfor %}
 	  <div class="nav navbar-nav navbar-right dropdown">
-        <a id="user-info" class="homemenu dropdown-toggle" data-toggle="dropdown" href="">{{ user.cellphone }}</a>
+        <a id="user-info" class="homemenu dropdown-toggle" data-toggle="dropdown" href="">{% if user.name %}{{ user.name }}{% else %}{{ user.cellphone }}{% endif %}</a>
         <ul id="user-list" class="dropdown-menu">
           <li><a href="javascript:getIndexViewRequest('more')">设置</a></li>
           <li><a href="javascript:getIndexViewRequest('logout')">退出</a></li>

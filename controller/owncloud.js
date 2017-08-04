@@ -388,14 +388,16 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 	}
 }
 
-var uploadFile = exports.uploadFile = function (fpath, content, cellphone) {
+var uploadFile = exports.uploadFile = function (fpath, content, cellphone, upimg) {
 	var fsstol = 1;
 	var fsscur = 0;
 
 	var fname = fpath.split('/')
 	fname = fname[fname.length-1];
 
-	log.info('PUT ' + fpath);
+	if(upimg != 'usericon') {
+		log.info('PUT ' + fpath);
+	}
 
 	var chunkloc = fname.indexOf('-chunking-');
 	if(chunkloc > 0) {
@@ -424,10 +426,26 @@ var uploadFile = exports.uploadFile = function (fpath, content, cellphone) {
 		}
 	}
 
+	if(upimg == 'usericon') {
+		reqpath = config.get('datapath') + '/' + cellphone + '/user' + fpath.substr(fpath.lastIndexOf('.'));
+	}
 	//log.info('reqpath: ' + reqpath);
 
 	if(fsscur == 0) {
-		  fs.write(reqpath, content);
+		if(upimg == 'usericon') {
+			var imghead = config.get('datapath') + '/' + cellphone + '/user';
+			var imgpng = imghead + '.png';
+			var imgjpg = imghead + '.jpg';
+			var imgjpeg = imghead + '.jpeg';
+			var imggif = imghead + '.gif';
+
+			fs.exists(imgpng) && fs.remove(imgpng);
+			fs.exists(imgjpg) && fs.remove(imgjpg);
+			fs.exists(imgjpeg) && fs.remove(imgjpeg);
+			fs.exists(imggif) && fs.remove(imggif);
+		}
+
+		fs.write(reqpath, content);
 	}
 	else if(fsscur > 0 && fsstol > 1 && fsscur < fsstol) {
 		fs.write(reqpath, content, 'a');

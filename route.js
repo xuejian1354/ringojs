@@ -1,3 +1,5 @@
+var fs = require("fs");
+var mime = require('ringo/mime');
 var response = require("ringo/jsgi/response");
 var base64 = require("ringo/base64");
 var {Reinhardt} = require("reinhardt");
@@ -5,6 +7,7 @@ var {Loader} = require('reinhardt/loaders/filesystem');
 var {setCookie} = require("ringo/utils/http");
 var {HttpHandler, postHandler, putHandler, getUserFromAuthKey, addUserToDB} = require('./controller/requesthandler');
 var menuconfig = require("gestalt").load(module.resolve("./config/menu.json"));
+var config = require("./config");
 var log = require("ringo/logging").getLogger(module.id);
 
 module.exports = function(app) {
@@ -51,18 +54,26 @@ module.exports = function(app) {
 
 			if(req.query.action == 'auth') {
 				var authKey = base64.encode(req.query.cellphone + ':' + req.query.password);
-				if(req.query.password == req.query.repassword
-					&& addUserToDB(req.query.cellphone, req.query.password)) {
-					return response.setStatus(303).addHeaders({
-						"location": '/index.html',
-						"set-cookie": [setCookie('authKey', authKey, -1)]
-					});
+				if(req.query.password == req.query.repassword) {
+					var addret = addUserToDB(req.query.cellphone, req.query.password);
+					if(addret == 'admin') {
+						return templates.renderResponse('register.html', {
+							title: menuconfig.get('title'),
+							'authority': addret,
+							query: req.query
+						});
+					}
+					else if(addret) {
+						return response.setStatus(303).addHeaders({
+							"location": '/index.html',
+							"set-cookie": [setCookie('authKey', authKey, -1)]
+						});
+					}
 				}
-				else {
-					return response.setStatus(303).addHeaders({
-						"location": '/register.html?error=registererror'
-					});
-				}
+
+				return response.setStatus(303).addHeaders({
+					"location": '/register.html?error=registererror'
+				});
 			}
 
 			var context = {title: menuconfig.get('title')};
@@ -83,6 +94,17 @@ module.exports = function(app) {
 
 			log.info("Return: 200\n");
 			return httphandler.response(templates);
+		}		
+		else if(way == 'usericon') {
+			var iconpath;
+			var imgtype = ['png', 'jpg', 'jpeg', 'ico', 'gif'];
+			for(var x in imgtype) {
+				iconpath = config.get('datapath') + '/' + req.user.cellphone + '/user.' + imgtype[x];
+				if(fs.exists(iconpath)) {
+					break;
+				}
+			}
+			return response.addHeaders({'Content-Length': fs.size(iconpath)}).stream(fs.open(iconpath, 'rb'), mime.mimeType(iconpath));
 		}
 
 		log.error("404 - Not Found: /" + way + '\n');

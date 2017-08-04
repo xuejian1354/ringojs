@@ -37,7 +37,6 @@ const MAPPING_USER = {
 		'password': 'string',
 		'authority': 'string',
 		'status': 'string',
-		'icon': 'string',
 		'update_at': 'timestamp'
 	}
 };
@@ -266,6 +265,10 @@ var postHandler = exports.postHandler = function(req) {
 			break;
 
 		case 'more':
+		case 'user':
+			retdata.name = req.user.name;
+			break;
+
 		case 'resetpass':
 			retdata.cellphone = req.user.cellphone;
 			break;
@@ -363,6 +366,10 @@ var postHandler = exports.postHandler = function(req) {
 		else {
 			return response.setStatus(200).json({status: 'fail'});
 		}
+
+	case 'renameuser':
+		updateUserToDB(req.user.cellphone, req.params.name);
+		return response.setStatus(200);
 	}
 
 	return response.setStatus(200);
@@ -375,6 +382,7 @@ var putHandler = exports.putHandler = function(req) {
 	var boundary = new ByteString(req.headers['content-type'].substr(req.headers['content-type'].indexOf('boundary=')+9), "ASCII");
 
 	var relpath = null;
+	var upimg = null;
 	var fname = null;
 	var content = null;
 
@@ -407,6 +415,11 @@ var putHandler = exports.putHandler = function(req) {
 		case 'relpath':
 			var relend = req.body.indexOf(CRLF, emptypos+4);
 			relpath = req.body.slice(emptypos+4, relend).decodeToString();
+			break;
+
+		case 'upimg':
+			var relend = req.body.indexOf(CRLF, emptypos+4);
+			upimg = req.body.slice(emptypos+4, relend).decodeToString();
 			break;
 
 		case 'files[]':
@@ -448,15 +461,14 @@ var putHandler = exports.putHandler = function(req) {
 	var path = relpath || '/';
 	var fpath = (path + '/' + fname).replace(/\/+/g, '/');
 
-	uploadFile(fpath, content, req.user.cellphone);
+	uploadFile(fpath, content, req.user.cellphone, upimg);
 
 	return response.setStatus(200).json({
 	  "files": [
 	    {
 		  "name": fname,
 		  "size": content.length,
-		  "type": "application/octet-stream",
-		  "url": req.headers.origin + '/index.html?action=all&path=' + encodeURIComponent(fpath)
+		  "type": "application/octet-stream"
 		  }
 	  ]
 	});
@@ -590,10 +602,24 @@ var addUserToDB = exports.addUserToDB = function(cellphone, password) {
 			return false;
 		}
 
+		var authority = 'user';
+		queryret = store.query("from User where authority='admin'");
+		if(queryret.length <= 0) {
+			authority = 'admin';
+		}
+
 		var transaction = store.beginTransaction();
-		var newuser = new User({"cellphone": cellphone, "password": passcode});
+		var newuser = new User({"cellphone": cellphone, "password": passcode, "authority": authority, "status": 'unblock'});
 		newuser.save();
 		transaction.commit();
+
+		getSelectFiles('/', cellphone);
+		var iconlink = config.get('datapath') + '/' + cellphone + '/user.png';
+		fs.copy(module.resolve("../public/img/user.png"), iconlink);
+
+		if(authority == 'admin') {
+			return 'admin';
+		}
 	}
 	else if(config.get('dbsupport') == 'file') {
 		var authorization = base64.encode(cellphone + ':' + password);
@@ -668,4 +694,27 @@ var updateUserPass = exports.updateUserPass = function(cellphone, pass, newpass)
 	}
 
 	return auth;
+}
+
+var updateUserToDB = function(cellphone, name) {
+	var connectionPool = module.singleton('connectionPool', function() {
+		return Store.initConnectionPool({
+			'url': 'jdbc:h2:' + config.get('database'),
+			'driver': 'org.h2.Driver'
+		});
+	});
+	var store = new Store(connectionPool);
+
+	var User = store.defineEntity("User", MAPPING_USER);
+	store.syncTables();
+
+	var queryret = store.query("from User where cellphone='" + cellphone + "'");
+	if(queryret.length > 0) {
+		var upuser = User.get(queryret[0].id);
+		upuser.name = name;
+		upuser.save();
+		return true;
+	}
+
+	return false;
 }
