@@ -1,7 +1,7 @@
 var fs = require('fs');
 var strings = require("ringo/utils/strings");
 var response = require("ringo/jsgi/response");
-var {getUserFromAuthKey} = require('../controller/requesthandler');
+var {getUserFromAuthKey} = require('../controller/dataopt');
 var log = require("ringo/logging").getLogger(module.id);
 var config = require("../config");
 

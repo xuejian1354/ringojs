@@ -4,42 +4,14 @@ var dates = require('ringo/utils/dates');
 var {Reinhardt} = require("reinhardt");
 var {Loader} = require('reinhardt/loaders/filesystem');
 var {setCookie, parseParameters} = require('ringo/utils/http');
-var {Store} = require("ringo-sqlstore");
 var {uploadFile} = require('./owncloud');
+var {addUserToDB, updateUserPass, updateUserToDB, getUsersFromDB, getFileShareFromPathWithNum, delFileShareFromId, getFileShareWithNum, getNameFromCellphone, getFileShareToUserWithNum, setFileShareToUserWithNum} = require('./dataopt');
 var base64 = require("ringo/base64");
 var strings = require("ringo/utils/strings");
 var response = require("ringo/jsgi/response");
 var config = require("../config");
 var menuconfig = require("gestalt").load(module.resolve("../config/menu.json"));
 var log = require("ringo/logging").getLogger(module.id);
-
-const MAPPING_GATEWAY = {
-	'table': 'oc_gateway',
-	'properties':{
-		'key': 'string',
-		'val': 'string'
-	}
-};
-
-const MAPPING_USER = {
-	'table': 'oc_users',
-	'id': {
-		'column': 'user_id'
-	},
-	'properties':{
-		'cellphone': {
-			'type': 'string',
-			'length': '16',
-			'nullable': false,
-			'unique': true
-		},
-		'name': 'string',
-		'password': 'string',
-		'authority': 'string',
-		'status': 'string',
-		'update_at': 'timestamp'
-	}
-};
 
 var HttpHandler = exports.HttpHandler = function(req) {
 	this.request = req;
@@ -138,7 +110,7 @@ function getDataByRequest(req) {
 	return null;
 }
 
-function getSelectFiles(path, cellphone) {
+function getSelectFiles(path, cellphone, lastlink, appendobj) {
 	var locpath = path || '/';
 	var homepath = config.get('datapath') + '/' + cellphone + '/files';
 	if(!fs.exists(homepath)) {
@@ -148,11 +120,124 @@ function getSelectFiles(path, cellphone) {
 	var abspath = homepath + locpath;
 
 	var locallist = getLocalPathList(locpath);
-	var lastlink;
-	if(locallist.length > 1) {
+	if(!lastlink && locallist.length > 1) {
 		lastlink = locallist[locallist.length-2];
 	}
-	return {path: path || '/', locallist: locallist, lastlink: lastlink, files: getAllFilesByPath(abspath)};
+	return {path: locpath, locallist: locallist, lastlink: lastlink, files: getAllFilesByPath(abspath, appendobj)};
+}
+
+function getMyShareFiles(path, cellphone) {
+	var lastlink;
+	path = path || '/';
+
+	if(path == '/') {
+		var filesinfo = [];
+		var dirsinfo = [];
+
+		var fileshares = getFileShareWithNum('master', cellphone);
+		var homepath = config.get('datapath') + '/' + cellphone + '/files';
+
+		for(var x in fileshares) {
+			var fullPath = homepath + fileshares[x].path;
+			var sloc = fullPath.replace(/\/{2,}/g, "/").split('/');
+			var name = sloc.pop();
+			if(!name) {
+				name = sloc.pop();
+			}
+
+			var slavename = getNameFromCellphone(fileshares[x].slave) || (fileshares[x].slave.substr(0,3) + '****' + fileshares[x].slave.substr(-4));
+
+			if (fs.isFile(fullPath)) {
+				filesinfo.push({
+					name: name,
+					type: '-',
+					mime: mime.mimeType(name),
+					path: encodeURIComponent(fileshares[x].path),
+					size: getFileSizeFormat(fullPath),
+					append: {
+						shareid: fileshares[x].id,
+						sharewith: slavename
+					}
+				});
+			}
+			else if (fs.isDirectory(fullPath)) {
+				dirsinfo.push({
+					name: name,
+					type: 'd',
+					path: encodeURIComponent(fileshares[x].path),
+					size: fs.list(fullPath).length,
+					append: {
+						shareid: fileshares[x].id,
+						sharewith: slavename
+					}
+				});
+			}
+		}
+
+		return {path: path, files: appendindex(dirsinfo.concat(filesinfo))};
+	}
+	else if(getFileShareWithNum('master', cellphone, path).length > 0) {
+		lastlink = {index: 1, path: '.', link: encodeURIComponent('/'), type: 'd'};
+	}
+
+	return getSelectFiles(path, cellphone, lastlink);
+}
+
+function getShareFiles(path, cellphone, master) {
+	var lastlink;
+	path = path || '/';
+
+	if(path == '/') {
+		var filesinfo = [];
+		var dirsinfo = [];
+
+		var fileshares = getFileShareWithNum('slave', cellphone);
+
+		for(var x in fileshares) {
+			var fullPath = config.get('datapath') + '/' + fileshares[x].master + '/files' + fileshares[x].path;
+			var sloc = fullPath.replace(/\/{2,}/g, "/").split('/');
+			var name = sloc.pop();
+			if(!name) {
+				name = sloc.pop();
+			}
+
+			var mastername = getNameFromCellphone(fileshares[x].master) || (fileshares[x].master.substr(0,3) + '****' + fileshares[x].master.substr(-4));
+
+			if (fs.isFile(fullPath)) {
+				filesinfo.push({
+					name: name,
+					type: '-',
+					mime: mime.mimeType(name),
+					path: encodeURIComponent(fileshares[x].path),
+					size: getFileSizeFormat(fullPath),
+					append: {
+						sharefrom: mastername,
+						sharemaster: fileshares[x].master
+					}
+				});
+			}
+			else if (fs.isDirectory(fullPath)) {
+				dirsinfo.push({
+					name: name,
+					type: 'd',
+					path: encodeURIComponent(fileshares[x].path),
+					size: fs.list(fullPath).length,
+					append: {
+						sharefrom: mastername,
+						sharemaster: fileshares[x].master
+					}
+				});
+			}
+		}
+
+		return {path: path, files: appendindex(dirsinfo.concat(filesinfo))};
+	}
+	else if(getFileShareWithNum('slave', cellphone, path).length > 0) {
+		lastlink = {index: 1, path: '.', link: encodeURIComponent('/'), type: 'd'};
+	}
+
+	var mastername = getNameFromCellphone(master) || (master.substr(0,3) + '****' + master.substr(-4));
+	return getSelectFiles(path, master, lastlink, {sharefrom: mastername, sharemaster: master});
 }
 
 function getLocalPathList(locpath) {
@@ -167,7 +252,11 @@ function getLocalPathList(locpath) {
 
 		if(locarr[x] != '') {
 			tlink += '/' + locarr[x];
-			loclink.push({index: x+1, path: locarr[x], link: encodeURIComponent(tlink), type: type});
+			if(type == 'd') {
+				tlink += '/';
+			}
+
+			loclink.push({index: x+1, path: locarr[x], link: encodeURIComponent(tlink.replace(/\/{2,}/g, "/")), type: type});
 		}
 	}
 
@@ -175,7 +264,7 @@ function getLocalPathList(locpath) {
 	return loclink;
 }
 
-function getAllFilesByPath(path) {
+function getAllFilesByPath(path, appendobj) {
 	var locpath = path.substr(path.indexOf('/files')+6);
 	if(fs.isDirectory(path)) {
 		var filesinfo = [];
@@ -191,15 +280,17 @@ function getAllFilesByPath(path) {
 					path: encodeURIComponent((locpath+'/'+name).replace(/\/{2,}/g, "/")),
 					size: getFileSizeFormat(fullPath),
 					//date: dates.format(fs.lastModified(fullPath), 'yyyy-MM-dd')
+					append: appendobj
 				});
 			}
 			else if (fs.isDirectory(fullPath)) {
 				dirsinfo.push({
 					name: name,
 					type: 'd',
-					path: encodeURIComponent((locpath+'/'+name).replace(/\/{2,}/g, "/")),
+					path: encodeURIComponent((locpath+'/'+name+'/').replace(/\/{2,}/g, "/")),
 					size: fs.list(fullPath).length,
 					//date: dates.format(fs.lastModified(fullPath), 'yyyy-MM-dd')
+					append: appendobj
 				});
 			}
 		});
@@ -216,7 +307,8 @@ function getAllFilesByPath(path) {
 			mime: mime.mimeType(fname),
 			path: encodeURIComponent(locpath.replace(/\/{2,}/g, "/")),
 			size: getFileSizeFormat(path),
-			date: dates.format(fs.lastModified(path), 'yyyy-MM-dd')
+			date: dates.format(fs.lastModified(path), 'yyyy-MM-dd'),
+			append: appendobj
 		};
 
 		//log.info('fileinfo: ' + JSON.stringify(fileinfo));
@@ -264,9 +356,19 @@ var postHandler = exports.postHandler = function(req) {
 			retdata.selectData = getSelectFiles(req.params.path, req.user.cellphone);
 			break;
 
+		case 'myshare':
+			retdata.selectData = getMyShareFiles(req.params.path, req.user.cellphone);
+			break;
+
+		case 'share':
+			retdata.selectData = getShareFiles(req.params.path, req.user.cellphone, req.params.master);
+			retdata.selectData.sharemaster = req.params.master;
+			break;
+
 		case 'more':
 		case 'user':
 			retdata.name = req.user.name;
+			retdata.cellphone = req.user.cellphone.substr(0, 3) + '****' + req.user.cellphone.substr(-4);
 			break;
 
 		case 'resetpass':
@@ -295,6 +397,11 @@ var postHandler = exports.postHandler = function(req) {
 		var abspath = config.get('datapath') + '/' + req.user.cellphone + '/files' + locpath;
 		var ret = renameNewFolderInPath(abspath, req.params.file, req.params.newfile);
 		if(ret == 0) {
+			var fshares = getFileShareFromPathWithNum(locpath, req.user.cellphone);
+			if(fshares.length > 0) {
+				delFileShareFromId(fshares[0].id);
+			}
+
 			return response.setStatus(200);
 		}
 		else if(ret > 0) {
@@ -315,7 +422,14 @@ var postHandler = exports.postHandler = function(req) {
 
 		var retpath = '/';
 		for(var x in reqpaths) {
-			var abspath = (config.get('datapath') + '/' + req.user.cellphone + '/files/' + decodeURIComponent(reqpaths[x])).replace(/\/{2,}/g, "/");
+			var fpath = decodeURIComponent(reqpaths[x]);
+			var abspath = (config.get('datapath') + '/' + req.user.cellphone + '/files/' + fpath).replace(/\/{2,}/g, "/");
+
+			var fshares = getFileShareFromPathWithNum(fpath, req.user.cellphone);
+			if(fshares.length > 0) {
+				delFileShareFromId(fshares[0].id);
+			}
+
 			removeFileFromPath(abspath);
 			retpath = fs.directory(decodeURIComponent(reqpaths[x]));
 		}
@@ -340,22 +454,89 @@ var postHandler = exports.postHandler = function(req) {
 	case 'copyfile':
 	    var srcs = JSON.parse(req.params.srcarr);
 		for(var x in srcs) {
-			var srcpath = config.get('datapath') + '/' + req.user.cellphone + '/files' + decodeURIComponent(srcs[x]);
+			var fpath = decodeURIComponent(srcs[x]);
+			var srcpath = config.get('datapath') + '/' + req.user.cellphone + '/files' + fpath;
+			if(req.params.master) {
+				srcpath = config.get('datapath') + '/' + req.params.master + '/files' + fpath;
+			}
 			var tarpath = config.get('datapath') + '/' + req.user.cellphone + '/files' + req.params.target;
 
 			if(fs.exists(srcpath) && fs.isDirectory(tarpath)) {
+				if(srcpath.lastIndexOf('/') == srcpath.length-1) {
+					srcpath = srcpath.substr(0, srcpath.length-1);
+				}
+
+				var ftarget = fs.join(tarpath, fs.base(srcpath));
+
 				if(req.params.opt == 'movefile') {
-					fs.move(srcpath, fs.join(tarpath, fs.base(srcpath)));
+					if(!fs.exists(ftarget)) {
+						fs.move(srcpath, ftarget);
+
+						var fshares = getFileShareFromPathWithNum(fpath, req.user.cellphone);
+						if(fshares.length > 0) {
+							delFileShareFromId(fshares[0].id);
+						}
+					}
 				}
 				else if(req.params.opt == 'copyfile') {
-					fs.copyTree(srcpath, fs.join(tarpath, fs.base(srcpath)));
+					var index = 1;
+					var srcbase = fs.base(srcpath);
+					while(fs.exists(ftarget)) {
+						var potpos = srcbase.lastIndexOf('.');
+						log.info('potpos: ' + potpos);
+						if(potpos <= 0 || potpos > srcbase.length-2) {
+							potpos = srcbase.length;
+						}
+
+						ftarget = fs.join(tarpath, srcbase.substr(0, potpos) + '(' + index + ')' + srcbase.substr(potpos));
+						index++;
+					}
+
+					fs.copyTree(srcpath, ftarget);
 				}
 			}
 		}
 
 		req.params.opt = 'view';
 		req.params.action = 'all';
+		if(req.params.reaction) {
+			req.params.action = req.params.reaction;
+		}
 		req.params.path = req.params.location;
+		return postHandler(req);
+
+	case 'getusers':
+		var srcarr = req.params.srcarr;
+		var users = getUsersFromDB(req.user.cellphone);
+		for(var x in users) {
+			users[x].name = users[x].name || (users[x].cellphone.substr(0, 3) + '****' + users[x].cellphone.substr(-4));
+			for(var y in srcarr) {
+				var queryret = getFileShareToUserWithNum(srcarr, users[x].cellphone, req.user.cellphone);
+				if(queryret.length > 0) {
+					users[x].selected = true;
+					users[x].shareid = queryret[0].id;
+				}
+			}
+		}
+		return response.setStatus(200).json({users: users});
+
+	case 'sharefile':
+		for(var x in req.params.shareids) {
+			delFileShareFromId(req.params.shareids[x]);
+		}
+
+		for(var x in req.params.optnums) {
+			for(var y in req.params.files) {
+				setFileShareToUserWithNum(req.params.files[y], req.params.optnums[x], req.user.cellphone);
+			}
+		}
+		return response.setStatus(200);
+
+	case 'cancleshare':
+		delFileShareFromId(req.params.id);
+
+		req.params.opt = 'view';
+		req.params.action = 'myshare';
 		return postHandler(req);
 
 	case 'resetpass':
@@ -530,189 +711,6 @@ function renameNewFolderInPath(path, file, newfile) {
 function removeFileFromPath(path) {
 	if(fs.exists(path)) {
 		fs.removeTree(path);
-		return true;
-	}
-
-	return false;
-}
-
-var getUserFromAuthKey = exports.getUserFromAuthKey = function(authorization) {
-	if(!authorization) {
-		return false;
-	}
-
-	var credentials = base64.decode(authorization).split(':');
-
-	if(config.get('dbsupport') == 'db') {
-		var passcode = strings.digest(credentials[1], 'MD5');
-
-		var connectionPool = module.singleton('connectionPool', function() {
-			return Store.initConnectionPool({
-				'url': 'jdbc:h2:' + config.get('database'),
-				'driver': 'org.h2.Driver'
-			});
-		});
-		var store = new Store(connectionPool);
-
-		var User = store.defineEntity("User", MAPPING_USER);
-		store.syncTables();
-
-		var queryret = store.query("from User where cellphone='" + credentials[0] + "' and password='" + passcode + "'");
-		if(queryret.length > 0) {
-			var useret = queryret[0];
-			useret.password = credentials[1];
-
-			return useret;
-		}
-	}
-	else if(config.get('dbsupport') == 'file') {
-		var txtStream = fs.open(config.get('database'), 'r');
-		var authKey = txtStream.readLine().trim();
-
-		while(authKey) {
-			if(authKey.indexOf(authorization) >= 0) {
-				return {cellphone:credentials[0], password: credentials[1]};
-			}
-
-			authKey = txtStream.readLine().trim();
-		}
-	}
-
-	return false;
-}
-
-var addUserToDB = exports.addUserToDB = function(cellphone, password) {
-
-	if(config.get('dbsupport') == 'db') {
-		var passcode = strings.digest(password, 'MD5');
-
-		var connectionPool = module.singleton('connectionPool', function() {
-			return Store.initConnectionPool({
-				'url': 'jdbc:h2:' + config.get('database'),
-				'driver': 'org.h2.Driver'
-			});
-		});
-		var store = new Store(connectionPool);
-
-		var User = store.defineEntity("User", MAPPING_USER);
-		store.syncTables();
-
-		var queryret = store.query("from User where cellphone='" + cellphone + "' and password='" + passcode + "'");
-		if(queryret.length > 0) {
-			return false;
-		}
-
-		var authority = 'user';
-		queryret = store.query("from User where authority='admin'");
-		if(queryret.length <= 0) {
-			authority = 'admin';
-		}
-
-		var transaction = store.beginTransaction();
-		var newuser = new User({"cellphone": cellphone, "password": passcode, "authority": authority, "status": 'unblock'});
-		newuser.save();
-		transaction.commit();
-
-		getSelectFiles('/', cellphone);
-		var iconlink = config.get('datapath') + '/' + cellphone + '/user.png';
-		fs.copy(module.resolve("../public/img/user.png"), iconlink);
-
-		if(authority == 'admin') {
-			return 'admin';
-		}
-	}
-	else if(config.get('dbsupport') == 'file') {
-		var authorization = base64.encode(cellphone + ':' + password);
-
-		var inStream = fs.open(config.get('database'), 'r');
-		var authKey = inStream.readLine().trim();
-
-		while(authKey) {
-			var credentials = base64.decode(authKey).split(':');
-			if(cellphone == credentials[0]) {
-				return false;
-			}
-
-			authKey = inStream.readLine().trim();
-		}
-
-		var outStream = fs.open(config.get('database'), 'a');
-		outStream.writeLine(authorization);
-	}
-
-	return true;
-}
-
-var updateUserPass = exports.updateUserPass = function(cellphone, pass, newpass) {
-
-	var auth = false;
-	if(config.get('dbsupport') == 'db') {
-		var passcode = strings.digest(pass, 'MD5');
-		var newpasscode = strings.digest(newpass, 'MD5');
-
-		var connectionPool = module.singleton('connectionPool', function() {
-			return Store.initConnectionPool({
-				'url': 'jdbc:h2:' + config.get('database'),
-				'driver': 'org.h2.Driver'
-			});
-		});
-		var store = new Store(connectionPool);
-
-		var User = store.defineEntity("User", MAPPING_USER);
-		store.syncTables();
-
-		var queryret = store.query("from User where cellphone='" + cellphone + "' and password='" + passcode + "'");
-		if(queryret.length > 0) {
-			var upuser = User.get(queryret[0].id);
-			upuser.password = newpasscode;
-			upuser.save();
-			auth = true;
-		}
-
-		return auth;
-	}
-	else if(config.get('dbsupport') == 'file') {
-		var inStream = fs.open(config.get('database'), 'r');
-		var rows = inStream.readLines();
-
-		for(var x in rows) {
-			var authKey = base64.encode(cellphone + ':' + pass);
-			var newKey = base64.encode(cellphone + ':' + newpass);
-			if(rows[x].trim().indexOf(authKey) >= 0) {
-				auth = true;
-				rows[x] = newKey;
-			}
-			else {
-				rows[x] = rows[x].trim();
-			}
-		}
-
-		if(auth) {
-			var outStream = fs.open(config.get('database'), 'w');
-			outStream.writeLines(rows);
-		}
-	}
-
-	return auth;
-}
-
-var updateUserToDB = function(cellphone, name) {
-	var connectionPool = module.singleton('connectionPool', function() {
-		return Store.initConnectionPool({
-			'url': 'jdbc:h2:' + config.get('database'),
-			'driver': 'org.h2.Driver'
-		});
-	});
-	var store = new Store(connectionPool);
-
-	var User = store.defineEntity("User", MAPPING_USER);
-	store.syncTables();
-
-	var queryret = store.query("from User where cellphone='" + cellphone + "'");
-	if(queryret.length > 0) {
-		var upuser = User.get(queryret[0].id);
-		upuser.name = name;
-		upuser.save();
 		return true;
 	}
 

@@ -1,7 +1,10 @@
 var fs = require("fs");
 var mime = require('ringo/mime');
+var dates = require('ringo/utils/dates');
 var {Reinhardt} = require("reinhardt");
 var {Loader} = require('reinhardt/loaders/filesystem');
+var {Store} = require("ringo-sqlstore");
+var {getSearchUser, getFileShareFromPathWithNum, getFileShareFromId, delFileShareFromId, setFileShareToUserWithNum, getCellphoneFromName} = require('./dataopt');
 var log = require("ringo/logging").getLogger(module.id);
 
 var config = require("../config");
@@ -47,7 +50,28 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 			}
 
 		case '/ocs/v1.php/apps/files_sharing/api/v1/shares':
-			return {type: 'xml', code: 200, context: '<?xml version="1.0"?>\r\n<ocs>\r\n <meta>\r\n  <status>ok</status>\r\n  <statuscode>100</statuscode>\r\n  <message/>\r\n </meta>\r\n <data/>\r\n</ocs>\r\n'};
+			var fshare;
+			if(method == 'get') {
+				fshare = getFileShareFromPath(req.query.path);
+			}
+			else if(method == 'post') {
+				fshare = setFileShareToUser(req.params.path, req.params.shareWith);
+			}
+
+			return {type: 'xml', code: 200, context: getFileShareXML(fshare)};
+
+		case '/ocs/v2.php/apps/notifications/api/v1/notifications':
+			if(req.query.format == 'json') {
+				var usercontext = owndata.get('usercontext');
+				usercontext.ocs.data = [];
+				return {type: 'json', code: 200, context: usercontext};
+			}
+
+		case '/ocs/v2.php/apps/files_sharing/api/v1/sharees':
+			if(req.query.format == 'json') {
+				var users = getSearchUser(req.query.search, req.query.page, req.query.perpage);
+				return {type: 'json', code: 200, context: transSearchUsersToJson(users)};
+			}
 
 		default:
 			if(reqpath.indexOf('/remote.php/webdav') == 0) {
@@ -55,7 +79,7 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 					return webdavHandler(req);
 				}
 				else if(method == 'get') {
-					var filesinfo = getFilesInfo(req.pathInfo.substr((config.get('ownbaseurl')+'/remote.php/webdav').length) || '/');
+					var filesinfo = getFilesInfo(req.pathInfo.substr((config.get('ownbaseurl')+'/remote.php/webdav').length) || '/', req.query.master);
 					if(filesinfo.length > 0) {
 						return getFileContentToReturnCode(filesinfo[0]);
 					}
@@ -107,6 +131,17 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 			}
 			else if(reqpath.indexOf('/index.php/avatar') == 0) {
 				return {type: 'json', code: 200, context: {"data": {"displayname": req.user.cellphone}}};
+			}
+			else if(reqpath.indexOf('/ocs/v1.php/apps/files_sharing/api/v1/shares') == 0) {
+				var fshare;
+				var fid = reqpath.split('/').pop();
+				if(method == 'del') {
+					fshare = delFileShareFromId(fid);
+				}
+				else if(method == 'get') {
+					fshare = getFileShareFromId(fid);
+				}
+				return {type: 'xml', code: 200, context: getFileShareXML(fshare)};
 			}
 			break;
 		}
@@ -200,10 +235,13 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 		return genDavXML(getFilesInfo(fpath));
 	}
 
-	function getFilesInfo(fpath){
+	function getFilesInfo(fpath, master){
 		var baseurl = config.get('ownbaseurl') + '/remote.php/webdav/';
 
 		var datahome = config.get('datapath') + '/' + req.user.cellphone + '/files';
+		if(master) {
+			datahome = config.get('datapath') + '/' + master + '/files';
+		}
 		var reqpath = datahome + fpath;
 		log.info('reqpath: ' + reqpath);
 
@@ -287,6 +325,11 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 		log.info('reqpath: ' + reqpath);
 
 		if(fs.exists(reqpath)) {
+			var fshares = getFileShareFromPathWithNum(fpath, req.user.cellphone);
+			if(fshares.length > 0) {
+				delFileShareFromId(fshares[0].id);
+			}
+
 			fs.removeTree(reqpath);
 		}
 	}
@@ -377,6 +420,58 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 		//return fs.read(config.get("configHome")+"/controller/test.xml", "r");
 	}
 
+	function getFileShareFromPath(path){
+		return getFileShareFromPathWithNum(path, req.user.cellphone);
+	}
+
+	function setFileShareToUser(path, shareWith) {
+		
+		return setFileShareToUserWithNum(path, getCellphoneFromName(shareWith), req.user.cellphone);
+	}
+
+	function getFileShareXML(fshare) {
+		var shareXML = '<?xml version="1.0"?>\r\n';
+		shareXML += '<ocs>\r\n';
+		shareXML += ' <meta>\r\n';
+		shareXML += '  <status>ok</status>\r\n';
+		shareXML += '  <statuscode>100</statuscode>\r\n';
+		shareXML += '  <message/>\r\n';
+		shareXML += ' </meta>\r\n';
+		shareXML += ' <data>\r\n';
+		for(var x in fshare) {
+			shareXML += '  <element>\r\n';
+			shareXML += '   <id>' + fshare[x].id +  '</id>\r\n';
+			shareXML += '   <share_type>0</share_type>\r\n';
+			shareXML += '   <uid_owner>' + fshare[x].master + '</uid_owner>\r\n';
+			shareXML += '   <displayname_owner>' + fshare[x].master + '</displayname_owner>\r\n';
+			shareXML += '   <permissions>19</permissions>\r\n';
+			shareXML += '   <stime>' + dates.format(new Date(), 'yyMMddhhmm') + '</stime>\r\n';
+			shareXML += '   <parent/>\r\n';
+			shareXML += '   <expiration/>\r\n';
+			shareXML += '   <token/>\r\n';
+			shareXML += '   <uid_file_owner>' + fshare[x].master + '</uid_file_owner>\r\n';
+			shareXML += '   <displayname_file_owner>' + fshare[x].master + '</displayname_file_owner>\r\n';
+			shareXML += '   <path>' + fshare[x].path + '</path>\r\n';
+			shareXML += '   <item_type>file</item_type>\r\n';
+			shareXML += '   <mimetype>application/octet-stream</mimetype>\r\n';
+			shareXML += '   <storage_id>home::' + fshare[x].master + '</storage_id>\r\n';
+			shareXML += '   <storage>1</storage>\r\n';
+			shareXML += '   <item_source>25</item_source>\r\n';
+			shareXML += '   <file_source>25</file_source>\r\n';
+			shareXML += '   <file_parent>2</file_parent>\r\n';
+			shareXML += '   <file_target>' + fshare[x].path + '</file_target>\r\n';
+			shareXML += '   <share_with>' + fshare[x].slave + '</share_with>\r\n';
+			shareXML += '   <share_with_displayname>' + fshare[x].slave + '</share_with_displayname>\r\n';
+			shareXML += '   <mail_send>0</mail_send>\r\n';
+			shareXML += '  </element>\r\n';
+		}
+		shareXML += ' </data>\r\n';
+		shareXML += '</ocs>\r\n';
+
+		//log.info(shareXML)
+		return shareXML;
+	}
+
 	function getFileContentToReturnCode(fileinfo) {
 		var stream = fs.open(fileinfo.path, 'rb');
 		if(stream) {
@@ -384,6 +479,39 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 		}
 		else {
 			return {code: 404};
+		}
+	}
+}
+
+function transSearchUsersToJson(users) {
+	var ownusers = [];
+	for(var x in users) {
+		ownusers.push({
+			'label': users[x],
+			'value': {
+				'shareType': 0,
+				'shareWith': users[x]
+			}
+		});
+	}
+
+	return {
+		'ocs': {
+			'meta': {
+				'status': 'ok',
+				'statuscode': 200,
+				'message': null
+			},
+			'data':{
+				'exact': {
+					'users': ownusers,
+					'groups': [],
+					'remotes': []
+				},
+				'users': [],
+				'groups': [],
+				'remotes': []
+			}
 		}
 	}
 }

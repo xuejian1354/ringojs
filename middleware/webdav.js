@@ -23,6 +23,7 @@ function ownHandler(req, res) {
 	case 'PROPFIND': method = 'prop'; break;
 	case 'MKCOL': method = 'mkcol'; break;
 	case 'GET': method = 'get'; break;
+	case 'POST': method = 'post'; break;
 	case 'PUT': method = 'put'; break;
 	case 'DELETE': method = 'del'; break;
 	case 'HEAD': method = 'head'; break;

@@ -1,6 +1,6 @@
 {
   "name": "RingoSite",
-  "port": 8080,
+  "port": 8088,
   "datapath": "/mnt/ringojs/data",
   "dbsupport": "db",
   "database": "/mnt/ringojs/data/ringo",
