@@ -40,7 +40,7 @@ exports.middleware = function baseauth(next, app) {
 				authorization = authorization.substr(authorization.indexOf('Basic')+6).trim();
 			}
 
-			var user = getUserFromAuthKey(authorization) || getUserFromAuthKey(getAuthkeyFromCookie(request));
+			var user = getUserFromAuthKey(authorization, true) || getUserFromAuthKey(getAuthkeyFromCookie(request), true);
 			if(user) {
 				request.user = user;
 				auth = true;

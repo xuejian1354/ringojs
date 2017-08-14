@@ -4,7 +4,7 @@ var dates = require('ringo/utils/dates');
 var {Reinhardt} = require("reinhardt");
 var {Loader} = require('reinhardt/loaders/filesystem');
 var {Store} = require("ringo-sqlstore");
-var {getSearchUser, getFileShareFromPathWithNum, getFileShareFromId, delFileShareFromId, setFileShareToUserWithNum, getCellphoneFromName} = require('./dataopt');
+var {getSearchUser, getFileShareWithNum, getFileShareFromPathWithNum, getFileShareFromId, delFileShareFromId, setFileShareToUserWithNum, getCellphoneFromName, getNameFromCellphone} = require('./dataopt');
 var log = require("ringo/logging").getLogger(module.id);
 
 var config = require("../config");
@@ -43,11 +43,13 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 				usercontext.ocs.data['display-name'] = req.user.cellphone;
 				return {type: 'json', code: 200, context: usercontext};
 			}
+			break;
 
 		case '/ocs/v1.php/cloud/capabilities':
 			if(req.query.format == 'json') {
 				return {type: 'json', code: 200, context: owndata.get('capacontext')};
 			}
+			break;
 
 		case '/ocs/v1.php/apps/files_sharing/api/v1/shares':
 			var fshare;
@@ -66,20 +68,38 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 				usercontext.ocs.data = [];
 				return {type: 'json', code: 200, context: usercontext};
 			}
+			break;
 
 		case '/ocs/v2.php/apps/files_sharing/api/v1/sharees':
 			if(req.query.format == 'json') {
 				var users = getSearchUser(req.query.search, req.query.page, req.query.perpage);
 				return {type: 'json', code: 200, context: transSearchUsersToJson(users)};
 			}
+			break;
 
 		default:
 			if(reqpath.indexOf('/remote.php/webdav') == 0) {
 				if(method == 'prop') {
-					return webdavHandler(req);
+					var baseurl = config.get('ownbaseurl');
+					var davpath = '/remote.php/webdav';
+					var fpath = req.pathInfo.substr((baseurl+davpath).length) || '/';
+					return webdavHandler(req, fpath);
 				}
 				else if(method == 'get') {
-					var filesinfo = getFilesInfo(req.pathInfo.substr((config.get('ownbaseurl')+'/remote.php/webdav').length) || '/', req.query.master);
+					var master = req.user.cellphone;
+					var datahome = config.get('datapath') + '/' + master + '/files';
+					var fpath = req.pathInfo.substr((config.get('ownbaseurl')+'/remote.php/webdav').length) || '/';
+					if(!fs.exists(datahome+fpath)) {
+						var fshare = getShareFilesWithCellphone(master, [], fpath);
+						if(!fshare) {
+							break;
+						}
+
+						fpath = fshare.path;
+						master = fshare.append.sharemaster;
+					}
+
+					var filesinfo = getFilesInfo(fpath, master);
 					if(filesinfo.length > 0) {
 						return getFileContentToReturnCode(filesinfo[0]);
 					}
@@ -182,14 +202,11 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 		}
 	};
 
-	function webdavHandler(req) {
-		//get files.
-		var baseurl = config.get('ownbaseurl');
-		var davpath = '/remote.php/webdav';
-
-		var fpath = req.pathInfo.substr((baseurl+davpath).length) || '/';
-
+	function webdavHandler(req, fpath, master, prehead) {
 		var datahome = config.get('datapath') + '/' + req.user.cellphone + '/files';
+		if(master) {
+			datahome = config.get('datapath') + '/' + master + '/files';
+		}
 		var reqpath = datahome + fpath;
 		//log.info('reqpath: ' + reqpath);
 
@@ -198,7 +215,7 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 		}
 
 		if(fs.exists(reqpath)) {
-			var filesinfo = getFilesDavInfo(fpath);
+			var filesinfo = getFilesDavInfo(fpath, master, prehead);
 
 			//request handler
 			var headers = req.headers;
@@ -220,30 +237,42 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 				return {type: "401", code: 401, headers: {'WWW-Authenticate': 'Basic realm="owncloud"'}};
 			}
 		}
-		else {
-			var davScript = '<?xml version="1.0"?>\r\n';
-			davScript += '<d:error xmlns:d="DAV:" xmlns:s="http://sabredav.org/ns">\r\n';
-			davScript += '  <s:exception>Sabre\DAV\Exception\NotFound</s:exception>\r\n';
-			davScript += '  <s:message>File with name ' + fpath + ' could not be located</s:message>\r\n';
-			davScript += '</d:error>\r\n';
 
-			return {type: '404', code: 404, context: davScript};
+		var fshare = getShareFilesWithCellphone(req.user.cellphone, getFilesInfo('/'), fpath);
+		if(fshare) {
+			return webdavHandler(req, fshare.path, fshare.append.sharemaster, fpath);
 		}
+
+		var davScript = '<?xml version="1.0"?>\r\n';
+		davScript += '<d:error xmlns:d="DAV:" xmlns:s="http://sabredav.org/ns">\r\n';
+		davScript += '  <s:exception>Sabre\DAV\Exception\NotFound</s:exception>\r\n';
+		davScript += '  <s:message>File with name ' + fpath + ' could not be located</s:message>\r\n';
+		davScript += '</d:error>\r\n';
+
+		return {type: '404', code: 404, context: davScript};
 	}
 
-	function getFilesDavInfo(fpath){
-		return genDavXML(getFilesInfo(fpath));
+	function getFilesDavInfo(fpath, master, prehead){
+		var filesinfo = getFilesInfo(fpath, master, prehead);
+		if(fpath == '/') {
+			filesinfo = getShareFilesWithCellphone(req.user.cellphone, filesinfo);
+		}
+
+		return genDavXML(filesinfo);
 	}
 
-	function getFilesInfo(fpath, master){
+	function getFilesInfo(fpath, master, prehead){
 		var baseurl = config.get('ownbaseurl') + '/remote.php/webdav/';
-
 		var datahome = config.get('datapath') + '/' + req.user.cellphone + '/files';
 		if(master) {
 			datahome = config.get('datapath') + '/' + master + '/files';
 		}
+
+		var requrl = (baseurl+fpath).replace(/\/{2,}/g, "/");
+		if(prehead) {
+			requrl = (baseurl+prehead).replace(/\/{2,}/g, "/");
+		}
 		var reqpath = datahome + fpath;
-		log.info('reqpath: ' + reqpath);
 
 		if(fs.isFile(reqpath)) {
 			var fileinfo = {
@@ -251,7 +280,7 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 				type: '-',
 				mime: mime.mimeType(fpath),
 				path: reqpath,
-				url: (baseurl+fpath).replace(/\/{2,}/g, "/"),
+				url: requrl,
 				size: fs.size(reqpath),
 				date: fs.lastModified(reqpath)
 			};
@@ -264,7 +293,7 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 				name: fpath,
 				type: 'd',
 				path: reqpath,
-				url: (baseurl+fpath).replace(/\/{2,}/g, "/"),
+				url: requrl,
 				size: fs.list(reqpath).length,
 				date: fs.lastModified(reqpath)
 			}];
@@ -278,7 +307,7 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 						type: '-',
 						mime: mime.mimeType(name),
 						path: reqpath,
-						url: (baseurl+fpath+'/'+name).replace(/\/{2,}/g, "/"),
+						url: (requrl+'/'+name).replace(/\/{2,}/g, "/"),
 						size: fs.size(fullPath),
 						date: fs.lastModified(fullPath)
 					});
@@ -288,7 +317,7 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 						name: name,
 						type: 'd',
 						path: reqpath,
-						url: (baseurl+fpath+'/'+name+'/').replace(/\/{2,}/g, "/"),
+						url: (requrl+'/'+name+'/').replace(/\/{2,}/g, "/"),
 						size: fs.list(fullPath).length,
 						date: fs.lastModified(fullPath)
 					});
@@ -421,7 +450,21 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 	}
 
 	function getFileShareFromPath(path){
-		return getFileShareFromPathWithNum(path, req.user.cellphone);
+		var sharefiles = getFileShareFromPathWithNum(path, req.user.cellphone);
+		if(path == '/') {
+			var slaveshares = getFileShareWithNum('slave', req.user.cellphone);
+			for(var x in slaveshares) {
+				var sarr = slaveshares[x].path.split('/');
+				slaveshares[x].path = '/' + sarr.pop();
+				if(slaveshares[x].path == '/') {
+					slaveshares[x].path = '/' + sarr.pop() + '/';
+				}
+			}
+
+			sharefiles = sharefiles.concat(slaveshares);
+		}
+
+		return sharefiles;
 	}
 
 	function setFileShareToUser(path, shareWith) {
@@ -516,6 +559,22 @@ function transSearchUsersToJson(users) {
 	}
 }
 
+var getFileSizeFormat = exports.getFileSizeFormat = function (path) {
+	var size = fs.size(path);
+	if(size < 1024) {
+		return size + ' B';
+	}
+	else if(size < 1024*1024) {
+		return (size/1024).toFixed(2) + ' KB';
+	}
+	else if(size < 1024*1024*1024) {
+		return (size/1024/1024).toFixed(2) + ' MB';
+	}
+	else {
+		return (size/1024/1024/1024).toFixed(2) + ' G';
+	}
+}
+
 var uploadFile = exports.uploadFile = function (fpath, content, cellphone, upimg) {
 	var fsstol = 1;
 	var fsscur = 0;
@@ -578,4 +637,104 @@ var uploadFile = exports.uploadFile = function (fpath, content, cellphone, upimg
 	else if(fsscur > 0 && fsstol > 1 && fsscur < fsstol) {
 		fs.write(reqpath, content, 'a');
 	}
+}
+
+function encodeURIComponentByFalse(url, flag) {
+	if(flag) {
+		return url;
+	}
+
+	return encodeURIComponent(url);
+}
+
+var getShareFilesWithCellphone = exports.getShareFilesWithCellphone = function (cellphone, haveinfos, strictpath) {
+	var filesinfo = [];
+	var dirsinfo = [];
+	var shmain, shbase;
+
+	if(strictpath) {
+		var strindex = strictpath.indexOf('/', 1);
+		if(strindex < 0) {
+			strindex = strictpath.length;
+		}
+		shmain = strictpath.substr(0, strindex);
+		shbase = strictpath.substr(strindex);
+	}
+
+	var fileshares = getFileShareWithNum('slave', cellphone);
+	for(var x in fileshares) {
+		var fullPath = config.get('datapath') + '/' + fileshares[x].master + '/files' + fileshares[x].path;
+		var sloc = fullPath.replace(/\/{2,}/g, "/").split('/');
+		var name = sloc.pop();
+		if(!name) {
+			name = sloc.pop();
+		}
+
+		var mastername = getNameFromCellphone(fileshares[x].master) || (fileshares[x].master.substr(0,3) + '****' + fileshares[x].master.substr(-4));
+
+		if (fs.isFile(fullPath)) {
+			var finfo = {
+				name: name,
+				type: '-',
+				mime: mime.mimeType(name),
+				path: encodeURIComponentByFalse(fileshares[x].path, haveinfos),
+				size: getFileSizeFormat(fullPath),
+				date: fs.lastModified(fullPath),
+				append: {
+					shareid: fileshares[x].id,
+					sharefrom: mastername,
+					sharemaster: fileshares[x].master
+				}
+			};
+
+			if(strictpath && shmain == '/' + name) {
+				finfo.path = (finfo.path + shbase).replace(/\/{2,}/g, "/");
+				return finfo;
+			}
+
+			if(haveinfos) {
+				finfo.path = config.get('datapath') + '/' + cellphone + '/files/';
+				finfo.size = fs.size(fullPath);
+				finfo.url = config.get('ownbaseurl') + '/remote.php/webdav/' + name;
+			}
+
+			filesinfo.push(finfo);
+		}
+		else if (fs.isDirectory(fullPath)) {
+			var dinfo = {
+				name: name,
+				type: 'd',
+				path: encodeURIComponentByFalse(fileshares[x].path, haveinfos),
+				size: fs.list(fullPath).length,
+				date: fs.lastModified(fullPath),
+				append: {
+					shareid: fileshares[x].id,
+					sharefrom: mastername,
+					sharemaster: fileshares[x].master
+				}
+			}
+
+			if(strictpath && shmain == '/' + name) {
+				dinfo.path = (dinfo.path+shbase).replace(/\/{2,}/g, "/");
+				return dinfo;
+			}
+
+			if(haveinfos) {
+				dinfo.path = config.get('datapath') + '/' + cellphone + '/files/';
+				dinfo.url = config.get('ownbaseurl') + '/remote.php/webdav/' + name + '/';
+			}
+
+			dirsinfo.push(dinfo);
+		}
+	}
+
+	if(strictpath) {
+		return false;
+	}
+
+	if(haveinfos) {
+		return haveinfos.concat(dirsinfo.concat(filesinfo));
+	}
+
+	return dirsinfo.concat(filesinfo);
 }

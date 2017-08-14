@@ -163,7 +163,6 @@ function imageUploadSetting() {
 }
 
 function getAllFilesXML(title, selectData) {
-
   var locallist = selectData.locallist;
   var files = selectData.files;
 
@@ -183,7 +182,7 @@ function getAllFilesXML(title, selectData) {
     + '</div>'
   + '</div>'
   + '<br><br>';
-  
+
   if (selectData.lastlink) {
     filesXml += '<a href="javascript:getIndexViewRequest(\'all\', {path: \'' + selectData.lastlink.link + '\'})">返回上一级</a><span> | </span>';
   }
@@ -216,7 +215,6 @@ function getAllFilesXML(title, selectData) {
     + '</thead>'
   + '<tbody id="gwtbody">';
 
-	
   for (x in files) {
     filesXml += 
       '<tr id="tr' + files[x].index + '">'
@@ -330,11 +328,9 @@ function getAllFilesXML(title, selectData) {
 }
 
 function getMyShareXML(title, selectData) {
-
   var files = selectData.files;
 
   var filesXml = '<h2>' + title + '</h2><hr>';
-  
   if (selectData.lastlink) {
     filesXml += '<a href="javascript:getIndexViewRequest(\'myshare\', {path: \'' + selectData.lastlink.link + '\'})">返回上一级</a>';
   }
@@ -360,7 +356,6 @@ function getMyShareXML(title, selectData) {
     + '</thead>'
   + '<tbody id="gwtbody">';
 
-	
   for (x in files) {
     filesXml += 
       '<tr id="tr' + files[x].index + '">'
@@ -379,7 +374,7 @@ function getMyShareXML(title, selectData) {
 	  + '<td>'
 	  + '<div class="ringo-moreopt-nav">';
 		if(selectData.path == '/') {
-			filesXml += '<a href="javascript:CancleSharedWithId(\'' + files[x].append.shareid + '\')"><span title="取消分享" class="glyphicon glyphicon-remove" style="margin: 0 2px;"></span></a>';
+			filesXml += '<a href="javascript:CancleSharedWithId(\'' + files[x].append.shareid + '\', \'myshare\')"><span title="取消分享" class="glyphicon glyphicon-remove" style="margin: 0 2px;"></span></a>';
 		}
 
 	    filesXml += '<a ';
@@ -410,16 +405,14 @@ function getMyShareXML(title, selectData) {
   }
 
   filesXml += '</tbody></table></div>';
-
   return filesXml;
 }
 
 function getShareXML(title, selectData) {
-
   var files = selectData.files;
 
   var filesXml = '<h2>' + title + '</h2><hr>';
-  
+
   if (selectData.lastlink) {
     filesXml += '<a href="javascript:getIndexViewRequest(\'share\', {path: \'' + selectData.lastlink.link + '\', master: \'' + selectData.sharemaster + '\'})">返回上一级</a>';
   }
@@ -440,7 +433,6 @@ function getShareXML(title, selectData) {
     + '</thead>'
   + '<tbody id="gwtbody">';
 
-	
   for (x in files) {
     filesXml += 
       '<tr id="tr' + files[x].index + '">'
@@ -457,8 +449,11 @@ function getShareXML(title, selectData) {
 	filesXml += files[x].name + '</a>'
 	  + '</td>'
 	  + '<td>'
-	  + '<div class="ringo-moreopt-nav">'
-		+ '<a href="javascript:copyToOpt([\'' + files[x].path + '\'], \'' + files[x].append.sharemaster + '\');"><span title="复制到" class="glyphicon glyphicon-share-alt" style="margin: 0 2px;"></span></button>'
+	  + '<div class="ringo-moreopt-nav">';
+	    if(typeof files[x].append.shareid != 'undefined') {
+	      filesXml += '<a href="javascript:CancleSharedWithId(\'' + files[x].append.shareid + '\', \'share\')"><span title="取消分享" class="glyphicon glyphicon-remove" style="margin: 0 2px;"></span></a>';
+		}
+		filesXml += '<a href="javascript:copyToOpt([\'' + files[x].path + '\'], \'' + files[x].append.sharemaster + '\');"><span title="复制到" class="glyphicon glyphicon-share-alt" style="margin: 0 2px;"></span></a>'
 	    + '<a ';
 
 		if (files[x].type == '-') {
@@ -803,7 +798,6 @@ function neutralOpt(toggle, path, id, folders){
 }
 
 function selectFolderPath(toggle, path, id, folders, action, srcarr, master) {
-
   if(action == 'mv') {
     $('#queryfolderModal .modal-header h4').text('移动到 ' + path);
 	$('#queryaction').val('movefile');
@@ -837,7 +831,6 @@ function selectFolderPath(toggle, path, id, folders, action, srcarr, master) {
 }
 
 function appendFoldersList(id, path, folders) {
-
   var gralen = path.split('/').length;
   if(path == '/') {
     gralen = 1;
@@ -888,7 +881,6 @@ function renameOpt(id, path) {
 }
 
 function getFoldersListByPath(url, path, id, callback, untoggle) {
-
   if($('#'+id+' .accordion-body').length > 0 && !untoggle) {
     $('#'+id+' .collapse').collapse('toggle');
 	callback(true, path);
@@ -920,7 +912,7 @@ function filesToQueryFolder(url, reaction) {
 
   $.post(url, postData, function(data, status) {
 	  if(status == 'success') {
-		if(req.params.action == 'share') {
+		if(reaction == 'share') {
 		  $('.main').html(getShareXML(data.selectMenu.submenu.name, data.selectData));
 		  updateActiveMenuBySelect(data.selectMenu);
 		}
@@ -938,8 +930,8 @@ function uploadFileDialog() {
   $('input[type="file"]').click();
 }
 
-function CancleSharedWithId(id) {
-	$.post('/index.html', {opt: 'cancleshare', id: id}, function (data, status){
+function CancleSharedWithId(id, reaction) {
+	$.post('/index.html', {opt: 'cancleshare', id: id, reaction: reaction}, function (data, status){
 		if(status == 'success') {
 			$('.main').html(getMyShareXML(data.selectMenu.submenu.name, data.selectData));
 			updateActiveMenuBySelect(data.selectMenu);
@@ -976,16 +968,14 @@ function ResetPassRequest(url) {
 	  });
 }
 
-function setCookie(c_name, value, expiredays)
-{
+function setCookie(c_name, value, expiredays) {
   var exdate = new Date();
   exdate.setDate(exdate.getDate() + expiredays);
   document.cookie = c_name + "=" + value
 	+ ((expiredays==null) ? "" : ";expires=" + exdate.toGMTString());
 }
 
-function getCookie(cname)
-{
+function getCookie(cname) {
   var name = cname + "=";
   var ca = document.cookie.split(';');
   for(var i=0; i<ca.length; i++) 

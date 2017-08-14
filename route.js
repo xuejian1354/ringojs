@@ -6,7 +6,7 @@ var {Reinhardt} = require("reinhardt");
 var {Loader} = require('reinhardt/loaders/filesystem');
 var {setCookie} = require("ringo/utils/http");
 var {HttpHandler, postHandler, putHandler} = require('./controller/requesthandler');
-var {getUserFromAuthKey, addUserToDB} = require('./controller/dataopt');
+var {getUserFromAuthKey, addUserToDB, getCellphoneFromName} = require('./controller/dataopt');
 var menuconfig = require("gestalt").load(module.resolve("./config/menu.json"));
 var config = require("./config");
 var log = require("ringo/logging").getLogger(module.id);
@@ -28,18 +28,17 @@ module.exports = function(app) {
 			log.info("Return: 200\n");
 
 			if(req.query.action == 'auth') {
-				var authKey = base64.encode(req.query.cellphone + ':' + req.query.password);
-				if(getUserFromAuthKey(authKey)) {
+				var authKey = getAuth(req.query.phonename, req.query.password);
+				if(authKey) {
 					return response.setStatus(303).addHeaders({
 						"location": '/index.html',
 						"set-cookie": [setCookie('authKey', authKey, -1)]
 					});
 				}
-				else {
-					return response.setStatus(303).addHeaders({
-						"location": '/login.html?error=unauthentication'
-					});
-				}
+
+				return response.setStatus(303).addHeaders({
+					"location": '/login.html?error=unauthentication'
+				});
 			}
 
 			var context = {title: menuconfig.get('title')};
@@ -119,4 +118,17 @@ module.exports = function(app) {
 	app.put('/index.html', function(req) {
 		return putHandler(req);
 	});
+}
+
+function getAuth(phonename, password, endfor) {
+	var authKey = base64.encode(phonename + ':' + password);
+	if(getUserFromAuthKey(authKey)) {
+		return authKey;
+	}
+
+	if(!endfor) {
+		return getAuth(getCellphoneFromName(phonename), password, true);
+	}
+
+	return false;
 }

@@ -47,16 +47,14 @@ const MAPPING_SHAREFILE = {
 };
 
 
-var getUserFromAuthKey = exports.getUserFromAuthKey = function(authorization) {
+var getUserFromAuthKey = exports.getUserFromAuthKey = function(authorization, withname) {
 	if(!authorization) {
 		return false;
 	}
 
 	var credentials = base64.decode(authorization).split(':');
-
 	if(config.get('dbsupport') == 'db') {
 		var passcode = strings.digest(credentials[1], 'MD5');
-
 		var connectionPool = module.singleton('connectionPool', function() {
 			return Store.initConnectionPool({
 				'url': 'jdbc:h2:' + config.get('database'),
@@ -64,7 +62,6 @@ var getUserFromAuthKey = exports.getUserFromAuthKey = function(authorization) {
 			});
 		});
 		var store = new Store(connectionPool);
-
 		var User = store.defineEntity("User", MAPPING_USER);
 		store.syncTables();
 
@@ -72,8 +69,16 @@ var getUserFromAuthKey = exports.getUserFromAuthKey = function(authorization) {
 		if(queryret.length > 0) {
 			var useret = queryret[0];
 			useret.password = credentials[1];
-
 			return useret;
+		}
+
+		if(withname) {
+			queryret = store.query("from User where name='" + credentials[0] + "' and password='" + passcode + "'");
+			if(queryret.length > 0) {
+				var useret = queryret[0];
+				useret.password = credentials[1];
+				return useret;
+			}
 		}
 	}
 	else if(config.get('dbsupport') == 'file') {
@@ -84,7 +89,6 @@ var getUserFromAuthKey = exports.getUserFromAuthKey = function(authorization) {
 			if(authKey.indexOf(authorization) >= 0) {
 				return {cellphone:credentials[0], password: credentials[1]};
 			}
-
 			authKey = txtStream.readLine().trim();
 		}
 	}

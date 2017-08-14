@@ -4,7 +4,7 @@ var dates = require('ringo/utils/dates');
 var {Reinhardt} = require("reinhardt");
 var {Loader} = require('reinhardt/loaders/filesystem');
 var {setCookie, parseParameters} = require('ringo/utils/http');
-var {uploadFile} = require('./owncloud');
+var {getFileSizeFormat, uploadFile, getShareFilesWithCellphone} = require('./owncloud');
 var {addUserToDB, updateUserPass, updateUserToDB, getUsersFromDB, getFileShareFromPathWithNum, delFileShareFromId, getFileShareWithNum, getNameFromCellphone, getFileShareToUserWithNum, setFileShareToUserWithNum} = require('./dataopt');
 var base64 = require("ringo/base64");
 var strings = require("ringo/utils/strings");
@@ -188,49 +188,7 @@ function getShareFiles(path, cellphone, master) {
 	path = path || '/';
 
 	if(path == '/') {
-		var filesinfo = [];
-		var dirsinfo = [];
-
-		var fileshares = getFileShareWithNum('slave', cellphone);
-
-		for(var x in fileshares) {
-			var fullPath = config.get('datapath') + '/' + fileshares[x].master + '/files' + fileshares[x].path;
-			var sloc = fullPath.replace(/\/{2,}/g, "/").split('/');
-			var name = sloc.pop();
-			if(!name) {
-				name = sloc.pop();
-			}
-
-			var mastername = getNameFromCellphone(fileshares[x].master) || (fileshares[x].master.substr(0,3) + '****' + fileshares[x].master.substr(-4));
-
-			if (fs.isFile(fullPath)) {
-				filesinfo.push({
-					name: name,
-					type: '-',
-					mime: mime.mimeType(name),
-					path: encodeURIComponent(fileshares[x].path),
-					size: getFileSizeFormat(fullPath),
-					append: {
-						sharefrom: mastername,
-						sharemaster: fileshares[x].master
-					}
-				});
-			}
-			else if (fs.isDirectory(fullPath)) {
-				dirsinfo.push({
-					name: name,
-					type: 'd',
-					path: encodeURIComponent(fileshares[x].path),
-					size: fs.list(fullPath).length,
-					append: {
-						sharefrom: mastername,
-						sharemaster: fileshares[x].master
-					}
-				});
-			}
-		}
-
-		return {path: path, files: appendindex(dirsinfo.concat(filesinfo))};
+		return {path: path, files: getShareFilesWithCellphone(cellphone)};
 	}
 	else if(getFileShareWithNum('slave', cellphone, path).length > 0) {
 		lastlink = {index: 1, path: '.', link: encodeURIComponent('/'), type: 'd'};
@@ -324,22 +282,6 @@ function appendindex(arr) {
 	}
 
 	return arr;
-}
-
-function getFileSizeFormat(path) {
-	var size = fs.size(path);
-	if(size < 1024) {
-		return size + ' B';
-	}
-	else if(size < 1024*1024) {
-		return (size/1024).toFixed(2) + ' KB';
-	}
-	else if(size < 1024*1024*1024) {
-		return (size/1024/1024).toFixed(2) + ' MB';
-	}
-	else {
-		return (size/1024/1024/1024).toFixed(2) + ' G';
-	}
 }
 
 var postHandler = exports.postHandler = function(req) {
@@ -536,7 +478,7 @@ var postHandler = exports.postHandler = function(req) {
 		delFileShareFromId(req.params.id);
 
 		req.params.opt = 'view';
-		req.params.action = 'myshare';
+		req.params.action = req.params.reaction;
 		return postHandler(req);
 
 	case 'resetpass':
