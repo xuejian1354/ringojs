@@ -144,12 +144,19 @@ var addUserToDB = exports.addUserToDB = function(cellphone, password) {
 		}
 
 		var transaction = store.beginTransaction();
-		var newuser = new User({"cellphone": cellphone, "password": passcode, "authority": authority, "status": 'unblock', 'update_at': (new Date()).valueOf()});
+		var newuser = new User({"cellphone": cellphone, "password": passcode, "authority": authority, "status": 'unblock', 'update_at': new Date()});
 		newuser.save();
 		transaction.commit();
 
+		var reqpath = config.get('datapath') + '/' + cellphone + '/files';
 		var iconlink = config.get('datapath') + '/' + cellphone + '/user.png';
-		fs.copy(module.resolve("../public/img/user.png"), iconlink);
+		if(!fs.exists(reqpath)) {
+			fs.makeTree(reqpath);
+		}
+
+		if(!fs.exists(iconlink)) {
+			fs.copy(module.resolve("../public/img/user.png"), iconlink);
+		}
 
 		if(authority == 'admin') {
 			return 'admin';

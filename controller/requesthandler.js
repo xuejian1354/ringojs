@@ -237,7 +237,7 @@ function getAllFilesByPath(path, appendobj) {
 					mime: mime.mimeType(name),
 					path: encodeURIComponent((locpath+'/'+name).replace(/\/{2,}/g, "/")),
 					size: getFileSizeFormat(fullPath),
-					//date: dates.format(fs.lastModified(fullPath), 'yyyy-MM-dd')
+					date: dates.format(fs.lastModified(fullPath), 'yyyy-MM-dd'),
 					append: appendobj
 				});
 			}
@@ -247,7 +247,7 @@ function getAllFilesByPath(path, appendobj) {
 					type: 'd',
 					path: encodeURIComponent((locpath+'/'+name+'/').replace(/\/{2,}/g, "/")),
 					size: fs.list(fullPath).length,
-					//date: dates.format(fs.lastModified(fullPath), 'yyyy-MM-dd')
+					date: dates.format(fs.lastModified(fullPath), 'yyyy-MM-dd'),
 					append: appendobj
 				});
 			}

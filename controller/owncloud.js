@@ -282,7 +282,7 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 				path: reqpath,
 				url: requrl,
 				size: fs.size(reqpath),
-				date: fs.lastModified(reqpath)
+				date: dates.format(fs.lastModified(reqpath), 'E, dd MMM yyyy HH:mm:ss', 'en', 'TMT+8') + ' GMT'
 			};
 
 			//log.info('fileinfo: ' + JSON.stringify(fileinfo));
@@ -295,7 +295,7 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 				path: reqpath,
 				url: requrl,
 				size: fs.list(reqpath).length,
-				date: fs.lastModified(reqpath)
+				date: dates.format(fs.lastModified(reqpath), 'E, dd MMM yyyy HH:mm:ss', 'en', 'TMT+8') + ' GMT'
 			}];
 
 			var names = fs.list(reqpath);
@@ -309,7 +309,7 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 						path: reqpath,
 						url: (requrl+'/'+name).replace(/\/{2,}/g, "/"),
 						size: fs.size(fullPath),
-						date: fs.lastModified(fullPath)
+						date: dates.format(fs.lastModified(fullPath), 'E, dd MMM yyyy HH:mm:ss', 'en', 'TMT+8') + ' GMT'
 					});
 				}
 				else if (fs.isDirectory(fullPath)) {
@@ -319,7 +319,7 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 						path: reqpath,
 						url: (requrl+'/'+name+'/').replace(/\/{2,}/g, "/"),
 						size: fs.list(fullPath).length,
-						date: fs.lastModified(fullPath)
+						date: dates.format(fs.lastModified(fullPath), 'E, dd MMM yyyy HH:mm:ss', 'en', 'TMT+8') + ' GMT'
 					});
 				}
 			});
@@ -679,7 +679,7 @@ var getShareFilesWithCellphone = exports.getShareFilesWithCellphone = function (
 				mime: mime.mimeType(name),
 				path: encodeURIComponentByFalse(fileshares[x].path, haveinfos),
 				size: getFileSizeFormat(fullPath),
-				date: fs.lastModified(fullPath),
+				date: dates.format(fs.lastModified(fullPath), 'E, dd MMM yyyy HH:mm:ss', 'en', 'TMT+8') + ' GMT',
 				append: {
 					shareid: fileshares[x].id,
 					sharefrom: mastername,
@@ -706,7 +706,7 @@ var getShareFilesWithCellphone = exports.getShareFilesWithCellphone = function (
 				type: 'd',
 				path: encodeURIComponentByFalse(fileshares[x].path, haveinfos),
 				size: fs.list(fullPath).length,
-				date: fs.lastModified(fullPath),
+				date: dates.format(fs.lastModified(fullPath), 'E, dd MMM yyyy HH:mm:ss', 'en', 'TMT+8') + ' GMT',
 				append: {
 					shareid: fileshares[x].id,
 					sharefrom: mastername,

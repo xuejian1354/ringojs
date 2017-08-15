@@ -210,7 +210,7 @@ function getAllFilesXML(title, selectData) {
     + '<th>文件名</th>'
 	+ '<th style="width: 80px;"></th>'
     + '<th style="text-align: center; width: 80px;">大小</th>'
-    + '<th style="text-align: center; width: 180px;"><!--修改日期--></th>'
+    + '<th style="text-align: center; width: 180px;">修改日期</th>'
     + '</tr>'
     + '</thead>'
   + '<tbody id="gwtbody">';
