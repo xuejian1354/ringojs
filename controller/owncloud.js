@@ -86,8 +86,8 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 					return webdavHandler(req, fpath);
 				}
 				else if(method == 'get') {
-					var master = req.user.cellphone;
-					var datahome = config.get('datapath') + '/' + master + '/files';
+					var master = req.user.name;
+					var datahome = config.get('datapath') + '/' + master;
 					var fpath = req.pathInfo.substr((config.get('ownbaseurl')+'/remote.php/webdav').length) || '/';
 					if(!fs.exists(datahome+fpath)) {
 						var fshare = getShareFilesWithCellphone(master, [], fpath);
@@ -203,9 +203,9 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 	};
 
 	function webdavHandler(req, fpath, master, prehead) {
-		var datahome = config.get('datapath') + '/' + req.user.cellphone + '/files';
+		var datahome = config.get('datapath') + '/' + req.user.cellphone;
 		if(master) {
-			datahome = config.get('datapath') + '/' + master + '/files';
+			datahome = config.get('datapath') + '/' + master;
 		}
 		var reqpath = datahome + fpath;
 		//log.info('reqpath: ' + reqpath);
@@ -263,9 +263,9 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 
 	function getFilesInfo(fpath, master, prehead){
 		var baseurl = config.get('ownbaseurl') + '/remote.php/webdav/';
-		var datahome = config.get('datapath') + '/' + req.user.cellphone + '/files';
+		var datahome = config.get('datapath') + '/' + req.user.cellphone;
 		if(master) {
-			datahome = config.get('datapath') + '/' + master + '/files';
+			datahome = config.get('datapath') + '/' + master;
 		}
 
 		var requrl = (baseurl+fpath).replace(/\/{2,}/g, "/");
@@ -300,6 +300,10 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 
 			var names = fs.list(reqpath);
 			names.forEach(function(name) {
+				if(name.indexOf('.') == 0) {
+					return;
+				}
+
 				var fullPath = fs.join(reqpath, name).replace(/\/{2,}/g, "/");
 				if (fs.isFile(fullPath)) {
 					filesinfo.push({
@@ -337,7 +341,7 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 	function mkDir(dpath) {
 		var baseurl = config.get('ownbaseurl') + '/remote.php/webdav/';
 
-		var datahome = config.get('datapath') + '/' + req.user.cellphone + '/files';
+		var datahome = config.get('datapath') + '/' + req.user.cellphone;
 		var reqpath = datahome + dpath;
 		log.info('reqpath: ' + reqpath);
 
@@ -349,7 +353,7 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 	function rmFile(fpath) {
 		var baseurl = config.get('ownbaseurl') + '/remote.php/webdav/';
 
-		var datahome = config.get('datapath') + '/' + req.user.cellphone + '/files';
+		var datahome = config.get('datapath') + '/' + req.user.cellphone;
 		var reqpath = datahome + fpath;
 		log.info('reqpath: ' + reqpath);
 
@@ -366,7 +370,7 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 	function findFile(fpath) {
 		var baseurl = config.get('ownbaseurl') + '/remote.php/webdav/';
 
-		var datahome = config.get('datapath') + '/' + req.user.cellphone + '/files';
+		var datahome = config.get('datapath') + '/' + req.user.cellphone;
 		var reqpath = datahome + fpath;
 		log.info('reqpath: ' + reqpath);
 
@@ -381,7 +385,7 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 	function moveFile(source, target) {
 		var baseurl = config.get('ownbaseurl') + '/remote.php/webdav/';
 
-		var datahome = config.get('datapath') + '/' + req.user.cellphone + '/files';
+		var datahome = config.get('datapath') + '/' + req.user.cellphone;
 		var reqsrc = datahome + source;
 		var reqtar = datahome + target;
 		log.info('move: ' + reqsrc + ' To ' + reqtar);
@@ -394,7 +398,7 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 	function copyFile(source, target) {
 		var baseurl = config.get('ownbaseurl') + '/remote.php/webdav/';
 
-		var datahome = config.get('datapath') + '/' + req.user.cellphone + '/files';
+		var datahome = config.get('datapath') + '/' + req.user.cellphone;
 		var reqsrc = datahome + source;
 		var reqtar = datahome + target;
 		log.info('copy: ' + reqsrc + ' To ' + reqtar);
@@ -598,7 +602,7 @@ var uploadFile = exports.uploadFile = function (fpath, content, cellphone, upimg
 	}
 	//log.info('----->>> fname: ' + fname + ', fsstol: ' + fsstol + ', fsscur: ' + fsscur);
 
-	var datahome = config.get('datapath') + '/' + cellphone + '/files';
+	var datahome = config.get('datapath') + '/' + cellphone;
 	var reqpath = datahome + fpath;
 
 	if(fsstol == 1) {
@@ -663,7 +667,7 @@ var getShareFilesWithCellphone = exports.getShareFilesWithCellphone = function (
 
 	var fileshares = getFileShareWithNum('slave', cellphone);
 	for(var x in fileshares) {
-		var fullPath = config.get('datapath') + '/' + fileshares[x].master + '/files' + fileshares[x].path;
+		var fullPath = config.get('datapath') + '/' + fileshares[x].master + fileshares[x].path;
 		var sloc = fullPath.replace(/\/{2,}/g, "/").split('/');
 		var name = sloc.pop();
 		if(!name) {
@@ -693,7 +697,7 @@ var getShareFilesWithCellphone = exports.getShareFilesWithCellphone = function (
 			}
 
 			if(haveinfos) {
-				finfo.path = config.get('datapath') + '/' + cellphone + '/files/';
+				finfo.path = config.get('datapath') + '/' + cellphone + '/';
 				finfo.size = fs.size(fullPath);
 				finfo.url = config.get('ownbaseurl') + '/remote.php/webdav/' + name;
 			}
@@ -720,7 +724,7 @@ var getShareFilesWithCellphone = exports.getShareFilesWithCellphone = function (
 			}
 
 			if(haveinfos) {
-				dinfo.path = config.get('datapath') + '/' + cellphone + '/files/';
+				dinfo.path = config.get('datapath') + '/' + cellphone + '/';
 				dinfo.url = config.get('ownbaseurl') + '/remote.php/webdav/' + name + '/';
 			}
 

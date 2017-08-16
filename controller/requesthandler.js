@@ -112,7 +112,7 @@ function getDataByRequest(req) {
 
 function getSelectFiles(path, cellphone, lastlink, appendobj) {
 	var locpath = path || '/';
-	var homepath = config.get('datapath') + '/' + cellphone + '/files';
+	var homepath = config.get('datapath') + '/' + cellphone;
 	if(!fs.exists(homepath)) {
 		fs.makeTree(homepath);
 	}
@@ -123,7 +123,7 @@ function getSelectFiles(path, cellphone, lastlink, appendobj) {
 	if(!lastlink && locallist.length > 1) {
 		lastlink = locallist[locallist.length-2];
 	}
-	return {path: locpath, locallist: locallist, lastlink: lastlink, files: getAllFilesByPath(abspath, appendobj)};
+	return {path: locpath, locallist: locallist, lastlink: lastlink, files: getAllFilesByPath(abspath, locpath, appendobj)};
 }
 
 function getMyShareFiles(path, cellphone) {
@@ -135,7 +135,7 @@ function getMyShareFiles(path, cellphone) {
 		var dirsinfo = [];
 
 		var fileshares = getFileShareWithNum('master', cellphone);
-		var homepath = config.get('datapath') + '/' + cellphone + '/files';
+		var homepath = config.get('datapath') + '/' + cellphone;
 
 		for(var x in fileshares) {
 			var fullPath = homepath + fileshares[x].path;
@@ -222,13 +222,16 @@ function getLocalPathList(locpath) {
 	return loclink;
 }
 
-function getAllFilesByPath(path, appendobj) {
-	var locpath = path.substr(path.indexOf('/files')+6);
+function getAllFilesByPath(path, locpath, appendobj) {
 	if(fs.isDirectory(path)) {
 		var filesinfo = [];
 		var dirsinfo = [];
-		var names = fs.list(path);
+		var names = fs.list(path).sort();
 		names.forEach(function(name) {
+			if(name.indexOf('.') == 0) {
+				return;
+			}
+
 			var fullPath = fs.join(path, name).replace(/\/{2,}/g, "/");
 			if (fs.isFile(fullPath)) {
 				filesinfo.push({
@@ -325,7 +328,7 @@ var postHandler = exports.postHandler = function(req) {
 
 	case 'newfolder':
 		var locpath = req.params.path || '/';
-		var abspath = config.get('datapath') + '/' + req.user.cellphone + '/files' + locpath;
+		var abspath = config.get('datapath') + '/' + req.user.cellphone + locpath;
 		var newFolder = createNewFolderInPath(abspath);
 		if(newFolder) {
 			return response.setStatus(201).json({folder: newFolder, date: dates.format(new Date(), 'yyyy-MM-dd')});
@@ -336,7 +339,7 @@ var postHandler = exports.postHandler = function(req) {
 
 	case 'renamefile':
 		var locpath = req.params.path || '/';
-		var abspath = config.get('datapath') + '/' + req.user.cellphone + '/files' + locpath;
+		var abspath = config.get('datapath') + '/' + req.user.cellphone + locpath;
 		var ret = renameNewFolderInPath(abspath, req.params.file, req.params.newfile);
 		if(ret == 0) {
 			var fshares = getFileShareFromPathWithNum(locpath, req.user.cellphone);
@@ -365,7 +368,7 @@ var postHandler = exports.postHandler = function(req) {
 		var retpath = '/';
 		for(var x in reqpaths) {
 			var fpath = decodeURIComponent(reqpaths[x]);
-			var abspath = (config.get('datapath') + '/' + req.user.cellphone + '/files/' + fpath).replace(/\/{2,}/g, "/");
+			var abspath = (config.get('datapath') + '/' + req.user.cellphone + '/' + fpath).replace(/\/{2,}/g, "/");
 
 			var fshares = getFileShareFromPathWithNum(fpath, req.user.cellphone);
 			if(fshares.length > 0) {
@@ -383,7 +386,7 @@ var postHandler = exports.postHandler = function(req) {
 
 	case 'getfolders':
 		var locpath = req.params.path || '/';
-		var abspath = config.get('datapath') + '/' + req.user.cellphone + '/files' + locpath;
+		var abspath = config.get('datapath') + '/' + req.user.cellphone + locpath;
 		var folders = getFoldersInPath(abspath);
 		if(folders) {
 			return response.setStatus(200).json({folders: folders});
@@ -397,11 +400,11 @@ var postHandler = exports.postHandler = function(req) {
 	    var srcs = JSON.parse(req.params.srcarr);
 		for(var x in srcs) {
 			var fpath = decodeURIComponent(srcs[x]);
-			var srcpath = config.get('datapath') + '/' + req.user.cellphone + '/files' + fpath;
+			var srcpath = config.get('datapath') + '/' + req.user.cellphone + fpath;
 			if(req.params.master) {
-				srcpath = config.get('datapath') + '/' + req.params.master + '/files' + fpath;
+				srcpath = config.get('datapath') + '/' + req.params.master + fpath;
 			}
-			var tarpath = config.get('datapath') + '/' + req.user.cellphone + '/files' + req.params.target;
+			var tarpath = config.get('datapath') + '/' + req.user.cellphone + req.params.target;
 
 			if(fs.exists(srcpath) && fs.isDirectory(tarpath)) {
 				if(srcpath.lastIndexOf('/') == srcpath.length-1) {
@@ -623,7 +626,7 @@ function getFoldersInPath(path) {
 		var fslists = fs.list(path);
 		for(var x in fslists) {
 			var file = fs.join(path, fslists[x]);
-			if(fs.isDirectory(file)) {
+			if(fs.isDirectory(file) && fslists[x].indexOf('.') != 0) {
 				fsarr.push(fslists[x]);
 			}
 		}

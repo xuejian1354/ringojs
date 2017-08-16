@@ -1,29 +1,13 @@
 {
-  "title": "RingoSite",
+  "title": "RingoHome",
   "menus": [
     {
-	  "name": "网盘",
+	  "name": "文件",
 	  "action": "pan",
 	  "submenu": [
 	    {
-		  "name": "全部文件",
+		  "name": "我的文件",
 		  "action": "all"
-		},
-		{
-		  "name": "图片",
-		  "action": "picture"
-		},
-		{
-		  "name": "文档",
-		  "action": "document"
-		},
-		{
-		  "name": "音乐",
-		  "action": "music"
-		},
-		{
-		  "name": "其它",
-		  "action": "other"
 		},
 		{
 		  "name": "我的分享",
@@ -36,7 +20,7 @@
 	  "action": "share",
 	  "submenu": [
 		{
-		  "name": "分享",
+		  "name": "用户分享",
 		  "action": "share"
 		}
 	  ]
@@ -46,7 +30,7 @@
 	  "action": "more",
 	  "submenu": [
 		{
-		  "name": "用户信息",
+		  "name": "我的信息",
 		  "action": "user"
 		},
 		{

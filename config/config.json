@@ -1,9 +1,9 @@
 {
-  "name": "RingoSite",
+  "name": "RingoHome",
   "port": 8088,
-  "datapath": "/mnt/ringojs/data",
+  "datapath": "/home",
   "dbsupport": "db",
-  "database": "/mnt/ringojs/data/ringo",
+  "database": "/usr/share/ringojs/ringos",
   "ownbaseurl": "/owncloud",
   "owncloud": {
 	"installed": true,

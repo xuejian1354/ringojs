@@ -56,14 +56,7 @@ module.exports = function(app) {
 				var authKey = base64.encode(req.query.cellphone + ':' + req.query.password);
 				if(req.query.password == req.query.repassword) {
 					var addret = addUserToDB(req.query.cellphone, req.query.password);
-					if(addret == 'admin') {
-						return templates.renderResponse('register.html', {
-							title: menuconfig.get('title'),
-							'authority': addret,
-							query: req.query
-						});
-					}
-					else if(addret) {
+					if(addret) {
 						return response.setStatus(303).addHeaders({
 							"location": '/index.html',
 							"set-cookie": [setCookie('authKey', authKey, -1)]

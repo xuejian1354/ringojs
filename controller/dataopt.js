@@ -121,6 +121,11 @@ var addUserToDB = exports.addUserToDB = function(cellphone, password) {
 	if(config.get('dbsupport') == 'db') {
 		var passcode = strings.digest(password, 'MD5');
 
+		var dbpath = config.get('database').substr(0, config.get('database').lastIndexOf('/'));
+		if(!fs.exists(dbpath)) {
+			fs.makeTree(dbpath);
+		}
+
 		var connectionPool = module.singleton('connectionPool', function() {
 			return Store.initConnectionPool({
 				'url': 'jdbc:h2:' + config.get('database'),
@@ -143,17 +148,17 @@ var addUserToDB = exports.addUserToDB = function(cellphone, password) {
 			authority = 'admin';
 		}
 
+		var reqpath = config.get('datapath') + '/' + cellphone;
+		if(!fs.exists(reqpath)) {
+			return false;
+		}
+
 		var transaction = store.beginTransaction();
-		var newuser = new User({"cellphone": cellphone, "password": passcode, "authority": authority, "status": 'unblock', 'update_at': new Date()});
+		var newuser = new User({"cellphone": cellphone, "name": cellphone, "password": passcode, "authority": authority, "status": 'unblock', 'update_at': new Date()});
 		newuser.save();
 		transaction.commit();
 
-		var reqpath = config.get('datapath') + '/' + cellphone + '/files';
 		var iconlink = config.get('datapath') + '/' + cellphone + '/user.png';
-		if(!fs.exists(reqpath)) {
-			fs.makeTree(reqpath);
-		}
-
 		if(!fs.exists(iconlink)) {
 			fs.copy(module.resolve("../public/img/user.png"), iconlink);
 		}

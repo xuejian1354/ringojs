@@ -548,7 +548,7 @@ function getUserInfoXML(title, name, cellphone) {
 
   var resetXml = '<h2>' + title + '</h2><hr>';
 
-  resetXml += '<div><img class="logimg" src="/usericon" style="width: 120px; height: 120px; border-radius: 8px;"><button onclick="javascript:uploadFileDialog()" class="btn btn-link">更改头像</button><input id="imgupload" name="files[]" type="file" accept="image/gif, image/jpeg, image/png" multiple style="display: none;"><br><div id="unedt"><div style="border: 1px; padding: 9px 12px; width: 120px; float: left; text-align: center;">昵称：' + name + '</div><button onclick="javascript:setUserName(\'' + name + '\')" class="btn btn-link" style="float: left;">修改</button></div><br><br><br><div style="margin-left: -24px; width: 160px; text-align: center;">手机：' + cellphone + '</div></div>';
+  resetXml += '<div><img class="logimg" src="/usericon" style="width: 120px; height: 120px; border-radius: 8px;"><button onclick="javascript:uploadFileDialog()" class="btn btn-link">更改头像</button><input id="imgupload" name="files[]" type="file" accept="image/gif, image/jpeg, image/png" multiple style="display: none;"></div>';
 
   return resetXml;
 }
