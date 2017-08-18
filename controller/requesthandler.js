@@ -276,6 +276,38 @@ function getAllFilesByPath(path, appendobj) {
 	return [];
 }
 
+function getSearchFiles(cellphone, locpath, searstr, filesinfo, dirsinfo) {
+	var homepath = config.get('datapath') + '/' + cellphone + '/files';
+	var path = (homepath+locpath).replace(/\/{2,}/g, "/");
+	var names = fs.list(path);
+	names.forEach(function(name) {
+		var fullPath = fs.join(path, name).replace(/\/{2,}/g, "/");
+		if (fs.isFile(fullPath) && name.toLowerCase().indexOf(searstr.toLowerCase()) >= 0) {
+			filesinfo.push({
+				name: name,
+				type: '-',
+				mime: mime.mimeType(name),
+				path: encodeURIComponent((locpath+'/'+name).replace(/\/{2,}/g, "/")),
+				size: getFileSizeFormat(fullPath),
+				date: dates.format(fs.lastModified(fullPath), 'yyyy-MM-dd')
+			});
+		}
+		else if (fs.isDirectory(fullPath)) {
+			if(name.toLowerCase().indexOf(searstr.toLowerCase()) >= 0) {
+				dirsinfo.push({
+					name: name,
+					type: 'd',
+					path: encodeURIComponent((locpath+'/'+name+'/').replace(/\/{2,}/g, "/")),
+					size: fs.list(fullPath).length,
+					date: dates.format(fs.lastModified(fullPath), 'yyyy-MM-dd')
+				});
+			}
+
+			getSearchFiles(cellphone, locpath+'/'+name+'/', searstr, filesinfo, dirsinfo);
+		}
+	});
+}
+
 function appendindex(arr) {
 	for(var x in arr) {
 		arr[x].index = x;
@@ -493,6 +525,37 @@ var postHandler = exports.postHandler = function(req) {
 	case 'renameuser':
 		updateUserToDB(req.user.cellphone, req.params.name);
 		return response.setStatus(200);
+
+	case 'filesearch':
+		var retdata = {};
+		if(req.params.val) {
+			var filesinfo = [];
+			var dirsinfo = [];
+
+			getSearchFiles(req.user.cellphone, req.params.path, req.params.val, filesinfo, dirsinfo);
+
+			var lastlink;
+			var locallist = getLocalPathList(req.params.path);
+			if(!lastlink && locallist.length > 1) {
+				lastlink = locallist[locallist.length-2];
+			}
+
+			retdata.selectData = {
+				searstr: req.params.val,
+				path: req.params.path,
+				locallist: locallist,
+				lastlink: lastlink,
+				files: dirsinfo.concat(filesinfo)
+			}
+		}
+		else {
+			retdata.selectData = getSelectFiles(req.params.path, req.user.cellphone);
+		}
+
+		retdata.selectMenu = getSelectMenuByAction(menuconfig.get('menus'), req.params.action);
+		retdata.action = retdata.selectMenu.submenu.action;
+
+		return response.setStatus(200).json(retdata);
 	}
 
 	return response.setStatus(200);

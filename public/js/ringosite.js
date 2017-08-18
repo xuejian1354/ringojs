@@ -10,6 +10,7 @@ function getIndexViewRequest(action, data) {
 	  switch(data.action) {
 	  case 'all':
 		$('.main').html(getAllFilesXML(data.selectMenu.submenu.name, data.selectData));
+		$('#filesearch').keydown(fileSearchRequest);
 		updateActiveMenuBySelect(data.selectMenu);
 		fileUploadSetting(data.selectData.path);
 		break;
@@ -173,6 +174,15 @@ function getAllFilesXML(title, selectData) {
     + '<button class="btn btn-default btn-sm btnopt hidden" onclick="checkMoveToOpt()" style="margin-left: 15px;">移动</button>'
 	+ '<button class="btn btn-default btn-sm btnopt hidden" onclick="checkCopyToOpt()">复制</button>'
 	+ '<button class="btn btn-default btn-sm btnopt hidden" onclick="checkDelToOpt()">删除</button>'
+	+ '<div class="form-group has-feedback" style="width: 150px; float: right;">';
+	if(selectData.searstr) {
+      filesXml += '<input id="filesearch" type="text" class="form-control input-sm" curpath="' + selectData.path + '" value="' + selectData.searstr + '">';
+	}
+	else {
+	  filesXml += '<input id="filesearch" type="text" class="form-control input-sm" curpath="' + selectData.path + '">';
+	}
+      filesXml += '<span class="glyphicon glyphicon-search form-control-feedback" aria-hidden="true"></span>'
+    + '</div>'
   + '</div>'
   + '<div id="progress" class="hidden" style="float: left;">'
     + '<div style="margin: 10px 0; border-radius: 4px; width: 500px; background: #c3c3c3">'
@@ -865,6 +875,7 @@ function removeFile(url, path) {
   $.post(url, {opt: 'removefile', path: path}, function(data, status) {
     if(status == 'success') {
 	  $('.main').html(getAllFilesXML(data.selectMenu.submenu.name, data.selectData));
+	  $('#filesearch').keydown(fileSearchRequest);
 	  updateActiveMenuBySelect(data.selectMenu);
 	  fileUploadSetting(data.selectData.path);
 	}
@@ -918,6 +929,7 @@ function filesToQueryFolder(url, reaction) {
 		}
 		else {
 		  $('.main').html(getAllFilesXML(data.selectMenu.submenu.name, data.selectData));
+		  $('#filesearch').keydown(fileSearchRequest);
 	      updateActiveMenuBySelect(data.selectMenu);
 		  fileUploadSetting(data.selectData.path);
 		}
@@ -966,6 +978,25 @@ function ResetPassRequest(url) {
 			$('#newpassword').val('');
 		}
 	  });
+}
+
+function fileSearchRequest(e)
+{
+  if(e.which == 13)
+  {
+    $.post('/index.html',
+	  {
+	    opt: 'filesearch',
+		path: $('#filesearch').attr('curpath'),
+		val: $('#filesearch').val()
+	  },
+	  function(data, status) {
+        $('.main').html(getAllFilesXML(data.selectMenu.submenu.name, data.selectData));
+        $('#filesearch').keydown(fileSearchRequest);
+        updateActiveMenuBySelect(data.selectMenu);
+        fileUploadSetting(data.selectData.path);
+    });
+  }
 }
 
 function setCookie(c_name, value, expiredays) {
