@@ -29,7 +29,6 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 		 requrl += '?' + req.queryString;
 	}
 	log.info(req.method + ' ' + requrl);
-	//method == 'prop' && log.info('Body ' + req.body);
 
 	function reqHandler(reqpath) {
 		switch(reqpath) {
@@ -141,7 +140,7 @@ var OwnCloud = exports.OwnCloud = function(method, req) {
 				}
 				else if(method == 'put') {
 					var filePath = req.pathInfo.substr((config.get('ownbaseurl')+'/remote.php/webdav').length);
-					putFile(filePath, req.body, req.headers['oc-total-length']);
+					putFile(filePath, req.input.read(), req.headers['oc-total-length']);
 					return {code: 201};
 				}
 			}

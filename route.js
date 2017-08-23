@@ -116,6 +116,7 @@ module.exports = function(app) {
 	});
 
 	app.put('/index.html', function(req) {
+		req.body = req.input.read();
 		return putHandler(req);
 	});
 }

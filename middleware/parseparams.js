@@ -17,8 +17,7 @@ exports.middleware = function Parameters(next, app) {
 			break;
 
 		case 'PUT':
-			var input = new Stream(request.env.servletRequest.getInputStream());
-			request.body = input.read();
+			request.input = new Stream(request.env.servletRequest.getInputStream());
 			break;
 		}
 
