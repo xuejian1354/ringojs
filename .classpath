@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="lib" path="lib/ivys/constantine-0.7.jar"/>
+	<classpathentry kind="lib" path="lib/ivys/h2-1.4.186.jar"/>
+	<classpathentry kind="lib" path="lib/ivys/jetty-continuation-7.5.4.v20111024.jar"/>
+	<classpathentry kind="lib" path="lib/ivys/jetty-http-7.5.4.v20111024.jar"/>
+	<classpathentry kind="lib" path="lib/ivys/jetty-io-7.5.4.v20111024.jar"/>
+	<classpathentry kind="lib" path="lib/ivys/jetty-security-7.5.4.v20111024.jar"/>
+	<classpathentry kind="lib" path="lib/ivys/jetty-server-7.5.4.v20111024.jar"/>
+	<classpathentry kind="lib" path="lib/ivys/jetty-servlet-7.5.4.v20111024.jar"/>
+	<classpathentry kind="lib" path="lib/ivys/jetty-util-7.5.4.v20111024.jar"/>
+	<classpathentry kind="lib" path="lib/ivys/jetty-xml-7.5.4.v20111024.jar"/>
+	<classpathentry kind="lib" path="lib/ivys/jline-1.0.jar"/>
+	<classpathentry kind="lib" path="lib/ivys/jnr-posix-1.1.9.jar"/>
+	<classpathentry kind="lib" path="lib/ivys/junit-3.8.2.jar"/>
+	<classpathentry kind="lib" path="lib/ivys/log4j-1.2.14.jar"/>
+	<classpathentry kind="lib" path="lib/ivys/rhino-1.7R5.jar"/>
+	<classpathentry kind="lib" path="lib/ivys/servlet-api-2.5.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="output" path="classes"/>
+</classpath>
