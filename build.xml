@@ -107,7 +107,7 @@
             <fileset dir="${src}" excludes="**/*.java,**/package.html"/>
         </jar>
         <jar jarfile="${lib}/rt.jar"
-            includes="**/java/awt/**"/>
+            includes="**/java/**"/>
         <jar jarfile="run.jar"
             basedir="${classes}"
             includes="**/tools/launcher/**"
