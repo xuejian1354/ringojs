@@ -112,7 +112,7 @@
         </jar>
         <jar jarfile="${lib}/rt.jar"
             basedir="${classes}"
-            includes="**/java/awt/**"/>
+            includes="**/java/**"/>
         <jar jarfile="run.jar"
             basedir="${classes}"
             includes="**/tools/launcher/**"
