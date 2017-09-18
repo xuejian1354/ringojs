@@ -1,5 +1,5 @@
-var Route = require("./route");
 var {Application} = require("stick");
+var Route = require("./route");
 
 var app = exports.app = new Application();
 
