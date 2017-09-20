@@ -87,7 +87,7 @@ var getUserFromAuthKey = exports.getUserFromAuthKey = function(authorization, wi
 
 		while(authKey) {
 			if(authKey.indexOf(authorization) >= 0) {
-				return {cellphone:credentials[0], password: credentials[1]};
+				return {cellphone: credentials[0], name: credentials[0], password: credentials[1]};
 			}
 			authKey = txtStream.readLine().trim();
 		}
@@ -97,23 +97,42 @@ var getUserFromAuthKey = exports.getUserFromAuthKey = function(authorization, wi
 }
 
 var getUsersFromDB = exports.getUsersFromDB = function(cellphone) {
-	var connectionPool = module.singleton('connectionPool', function() {
-		return Store.initConnectionPool({
-			'url': 'jdbc:h2:' + config.get('database'),
-			'driver': 'org.h2.Driver'
+	if(config.get('dbsupport') == 'db') {
+		var connectionPool = module.singleton('connectionPool', function() {
+			return Store.initConnectionPool({
+				'url': 'jdbc:h2:' + config.get('database'),
+				'driver': 'org.h2.Driver'
+			});
 		});
-	});
-	var store = new Store(connectionPool);
+		var store = new Store(connectionPool);
 
-	var User = store.defineEntity("User", MAPPING_USER);
-	store.syncTables();
-	
-	var querysql = "select cellphone, name from User";
-	if(cellphone) {
-		querysql += " where cellphone!='" + cellphone + "'";
+		var User = store.defineEntity("User", MAPPING_USER);
+		store.syncTables();
+
+		var querysql = "select cellphone, name from User";
+		if(cellphone) {
+			querysql += " where cellphone!='" + cellphone + "'";
+		}
+
+		return store.query(querysql);
 	}
+	else if(config.get('dbsupport') == 'file') {
+		var inStream = fs.open(config.get('database'), 'r');
+		var authKey = inStream.readLine().trim();
 
-	return store.query(querysql);
+		var users = [];
+
+		while(authKey) {
+			var credentials = base64.decode(authKey).split(':');
+			if(!cellphone || cellphone != credentials[0]) {
+				users.push({cellphone: credentials[0], name: credentials[0], password: credentials[1]});
+			}
+
+			authKey = inStream.readLine().trim();
+		}
+
+		return users;
+	}
 }
 
 var addUserToDB = exports.addUserToDB = function(cellphone, password) {
@@ -164,6 +183,10 @@ var addUserToDB = exports.addUserToDB = function(cellphone, password) {
 	}
 	else if(config.get('dbsupport') == 'file') {
 		var authorization = base64.encode(cellphone + ':' + password);
+
+		if(!fs.exists(config.get('database'))) {
+			fs.touch(config.get('database'));
+		}
 
 		var inStream = fs.open(config.get('database'), 'r');
 		var authKey = inStream.readLine().trim();
@@ -238,192 +261,245 @@ var updateUserPass = exports.updateUserPass = function(cellphone, pass, newpass)
 }
 
 var updateUserToDB = exports.updateUserToDB = function(cellphone, name) {
-	var connectionPool = module.singleton('connectionPool', function() {
-		return Store.initConnectionPool({
-			'url': 'jdbc:h2:' + config.get('database'),
-			'driver': 'org.h2.Driver'
+	if(config.get('dbsupport') == 'db') {
+		var connectionPool = module.singleton('connectionPool', function() {
+			return Store.initConnectionPool({
+				'url': 'jdbc:h2:' + config.get('database'),
+				'driver': 'org.h2.Driver'
+			});
 		});
-	});
-	var store = new Store(connectionPool);
+		var store = new Store(connectionPool);
 
-	var User = store.defineEntity("User", MAPPING_USER);
-	store.syncTables();
+		var User = store.defineEntity("User", MAPPING_USER);
+		store.syncTables();
 
-	var queryret = store.query("from User where cellphone='" + cellphone + "'");
-	if(queryret.length > 0) {
-		var upuser = User.get(queryret[0].id);
-		upuser.name = name;
-		upuser.save();
-		return true;
+		var queryret = store.query("from User where cellphone='" + cellphone + "'");
+		if(queryret.length > 0) {
+			var upuser = User.get(queryret[0].id);
+			upuser.name = name;
+			upuser.save();
+			return true;
+		}
 	}
 
 	return false;
 }
 
 var getCellphoneFromName = exports.getCellphoneFromName = function (name) {
-	var connectionPool = module.singleton('connectionPool', function() {
-		return Store.initConnectionPool({
-			'url': 'jdbc:h2:' + config.get('database'),
-			'driver': 'org.h2.Driver'
+	if(config.get('dbsupport') == 'db') {
+		var connectionPool = module.singleton('connectionPool', function() {
+			return Store.initConnectionPool({
+				'url': 'jdbc:h2:' + config.get('database'),
+				'driver': 'org.h2.Driver'
+			});
 		});
-	});
 
-	var store = new Store(connectionPool);
+		var store = new Store(connectionPool);
 
-	var User = store.defineEntity("User", MAPPING_USER);
-	store.syncTables();
+		var User = store.defineEntity("User", MAPPING_USER);
+		store.syncTables();
 
-	var queryret = store.query("select cellphone from User where name='" + name + "'");
-	if(queryret.length > 0) {
-		return queryret[0];
+		var queryret = store.query("select cellphone from User where name='" + name + "'");
+		if(queryret.length > 0) {
+			return queryret[0];
+		}
+	}
+	else if(config.get('dbsupport') == 'file') {
+		return name;
 	}
 
 	return '';
 }
 
 var getNameFromCellphone = exports.getNameFromCellphone = function (cellphone) {
-	var connectionPool = module.singleton('connectionPool', function() {
-		return Store.initConnectionPool({
-			'url': 'jdbc:h2:' + config.get('database'),
-			'driver': 'org.h2.Driver'
+	if(config.get('dbsupport') == 'db') {
+		var connectionPool = module.singleton('connectionPool', function() {
+			return Store.initConnectionPool({
+				'url': 'jdbc:h2:' + config.get('database'),
+				'driver': 'org.h2.Driver'
+			});
 		});
-	});
 
-	var store = new Store(connectionPool);
+		var store = new Store(connectionPool);
 
-	var User = store.defineEntity("User", MAPPING_USER);
-	store.syncTables();
+		var User = store.defineEntity("User", MAPPING_USER);
+		store.syncTables();
 
-	var queryret = store.query("select name from User where cellphone='" + cellphone + "'");
-	if(queryret.length > 0) {
-		return queryret[0];
+		var queryret = store.query("select name from User where cellphone='" + cellphone + "'");
+		if(queryret.length > 0) {
+			return queryret[0];
+		}
+	}
+	else if(config.get('dbsupport') == 'file') {
+		return cellphone;
 	}
 
 	return '';
 }
 
 var getSearchUser = exports.getSearchUser = function (searchstr, page, perpage) {
-	var connectionPool = module.singleton('connectionPool', function() {
-		return Store.initConnectionPool({
-			'url': 'jdbc:h2:' + config.get('database'),
-			'driver': 'org.h2.Driver'
+	if(config.get('dbsupport') == 'db') {
+		var connectionPool = module.singleton('connectionPool', function() {
+			return Store.initConnectionPool({
+				'url': 'jdbc:h2:' + config.get('database'),
+				'driver': 'org.h2.Driver'
+			});
 		});
-	});
 
-	var store = new Store(connectionPool);
+		var store = new Store(connectionPool);
 
-	var User = store.defineEntity("User", MAPPING_USER);
-	store.syncTables();
+		var User = store.defineEntity("User", MAPPING_USER);
+		store.syncTables();
 
-	var queryret = store.query("select name from User where name like '%" + searchstr + "%'");
-	log.info(JSON.stringify(queryret));
-	return queryret;
+		var queryret = store.query("select name from User where name like '%" + searchstr + "%'");
+		log.info(JSON.stringify(queryret));
+		return queryret;
+	}
+	else if(config.get('dbsupport') == 'file') {
+		var inStream = fs.open(config.get('database'), 'r');
+		var authKey = inStream.readLine().trim();
+
+		var users = [];
+
+		while(authKey) {
+			var credentials = base64.decode(authKey).split(':');
+			if(credentials[0].indexOf(searchstr) >= 0) {
+				users.push({name: credentials[0]});
+			}
+
+			authKey = inStream.readLine().trim();
+		}
+
+		return users;
+	}
 }
 
 var getFileShareFromId = exports.getFileShareFromId = function (id){
-	var connectionPool = module.singleton('connectionPool', function() {
-		return Store.initConnectionPool({
-			'url': 'jdbc:h2:' + config.get('database'),
-			'driver': 'org.h2.Driver'
+	if(config.get('dbsupport') == 'db') {
+		var connectionPool = module.singleton('connectionPool', function() {
+			return Store.initConnectionPool({
+				'url': 'jdbc:h2:' + config.get('database'),
+				'driver': 'org.h2.Driver'
+			});
 		});
-	});
-	var store = new Store(connectionPool);
+		var store = new Store(connectionPool);
 
-	var Sharefile = store.defineEntity("Sharefile", MAPPING_SHAREFILE);
-	store.syncTables();
+		var Sharefile = store.defineEntity("Sharefile", MAPPING_SHAREFILE);
+		store.syncTables();
 
-	var queryret = store.query("from Sharefile where id='" + id + "'");
-	return queryret;
+		var queryret = store.query("from Sharefile where id='" + id + "'");
+		return queryret;
+	}
+
+	return [];
 }
 
 var delFileShareFromId = exports.delFileShareFromId = function (id){
-	var connectionPool = module.singleton('connectionPool', function() {
-		return Store.initConnectionPool({
-			'url': 'jdbc:h2:' + config.get('database'),
-			'driver': 'org.h2.Driver'
+	if(config.get('dbsupport') == 'db') {
+		var connectionPool = module.singleton('connectionPool', function() {
+			return Store.initConnectionPool({
+				'url': 'jdbc:h2:' + config.get('database'),
+				'driver': 'org.h2.Driver'
+			});
 		});
-	});
-	var store = new Store(connectionPool);
+		var store = new Store(connectionPool);
 
-	var Sharefile = store.defineEntity("Sharefile", MAPPING_SHAREFILE);
-	store.syncTables();
+		var Sharefile = store.defineEntity("Sharefile", MAPPING_SHAREFILE);
+		store.syncTables();
 
-	var getshare = Sharefile.get(id);
-	getshare.remove();
+		var getshare = Sharefile.get(id);
+		getshare.remove();
+	}
 
 	return [];
 }
 
 var getFileShareFromPathWithNum = exports.getFileShareFromPathWithNum = function(path, cellphone){
-	var connectionPool = module.singleton('connectionPool', function() {
-		return Store.initConnectionPool({
-			'url': 'jdbc:h2:' + config.get('database'),
-			'driver': 'org.h2.Driver'
+	if(config.get('dbsupport') == 'db') {
+		var connectionPool = module.singleton('connectionPool', function() {
+			return Store.initConnectionPool({
+				'url': 'jdbc:h2:' + config.get('database'),
+				'driver': 'org.h2.Driver'
+			});
 		});
-	});
-	var store = new Store(connectionPool);
+		var store = new Store(connectionPool);
 
-	var Sharefile = store.defineEntity("Sharefile", MAPPING_SHAREFILE);
-	store.syncTables();
+		var Sharefile = store.defineEntity("Sharefile", MAPPING_SHAREFILE);
+		store.syncTables();
 
-	var queryret = store.query("from Sharefile where path like '" + path + "%' and master='" + cellphone + "'");
-	return queryret;
+		var queryret = store.query("from Sharefile where path like '" + path + "%' and master='" + cellphone + "'");
+		return queryret;
+	}
+
+	return [];
 }
 
 var getFileShareToUserWithNum = exports.getFileShareToUserWithNum = function (path, shareWith, cellphone) {
-	var connectionPool = module.singleton('connectionPool', function() {
-		return Store.initConnectionPool({
-			'url': 'jdbc:h2:' + config.get('database'),
-			'driver': 'org.h2.Driver'
+	if(config.get('dbsupport') == 'db') {
+		var connectionPool = module.singleton('connectionPool', function() {
+			return Store.initConnectionPool({
+				'url': 'jdbc:h2:' + config.get('database'),
+				'driver': 'org.h2.Driver'
+			});
 		});
-	});
-	var store = new Store(connectionPool);
+		var store = new Store(connectionPool);
 
-	var Sharefile = store.defineEntity("Sharefile", MAPPING_SHAREFILE);
-	store.syncTables();
+		var Sharefile = store.defineEntity("Sharefile", MAPPING_SHAREFILE);
+		store.syncTables();
 
-	return store.query("from Sharefile where path='" + path + "' and master='" + cellphone + "' and slave='" + shareWith + "'");
+		return store.query("from Sharefile where path='" + path + "' and master='" + cellphone + "' and slave='" + shareWith + "'");
+	}
+
+	return [];
 }
 
 var setFileShareToUserWithNum = exports.setFileShareToUserWithNum = function (path, shareWith, cellphone) {
-	var connectionPool = module.singleton('connectionPool', function() {
-		return Store.initConnectionPool({
-			'url': 'jdbc:h2:' + config.get('database'),
-			'driver': 'org.h2.Driver'
+	if(config.get('dbsupport') == 'db') {
+		var connectionPool = module.singleton('connectionPool', function() {
+			return Store.initConnectionPool({
+				'url': 'jdbc:h2:' + config.get('database'),
+				'driver': 'org.h2.Driver'
+			});
 		});
-	});
-	var store = new Store(connectionPool);
+		var store = new Store(connectionPool);
 
-	var Sharefile = store.defineEntity("Sharefile", MAPPING_SHAREFILE);
-	store.syncTables();
+		var Sharefile = store.defineEntity("Sharefile", MAPPING_SHAREFILE);
+		store.syncTables();
 
-	var queryret = store.query("from Sharefile where path='" + path + "' and master='" + cellphone + "' and slave='" + shareWith + "'");
-	if(queryret.length == 0) {
-		var transaction = store.beginTransaction();
-		var newshare = new Sharefile({path: path, master: cellphone, slave: shareWith});
-		newshare.save();
-		transaction.commit();
+		var queryret = store.query("from Sharefile where path='" + path + "' and master='" + cellphone + "' and slave='" + shareWith + "'");
+		if(queryret.length == 0) {
+			var transaction = store.beginTransaction();
+			var newshare = new Sharefile({path: path, master: cellphone, slave: shareWith});
+			newshare.save();
+			transaction.commit();
+		}
+
+		return store.query("from Sharefile where path='" + path + "' and master='" + cellphone + "' and slave='" + shareWith + "'");
 	}
 
-	return store.query("from Sharefile where path='" + path + "' and master='" + cellphone + "' and slave='" + shareWith + "'");
+	return [];
 }
 
 var getFileShareWithNum = exports.getFileShareWithNum = function(field, cellphone, path){
-	var connectionPool = module.singleton('connectionPool', function() {
-		return Store.initConnectionPool({
-			'url': 'jdbc:h2:' + config.get('database'),
-			'driver': 'org.h2.Driver'
+	if(config.get('dbsupport') == 'db') {
+		var connectionPool = module.singleton('connectionPool', function() {
+			return Store.initConnectionPool({
+				'url': 'jdbc:h2:' + config.get('database'),
+				'driver': 'org.h2.Driver'
+			});
 		});
-	});
-	var store = new Store(connectionPool);
+		var store = new Store(connectionPool);
 
-	var Sharefile = store.defineEntity("Sharefile", MAPPING_SHAREFILE);
-	store.syncTables();
+		var Sharefile = store.defineEntity("Sharefile", MAPPING_SHAREFILE);
+		store.syncTables();
 
-	var sqlsen = "from Sharefile where " + field + "='" + cellphone + "'";
-	if(path) {
-		sqlsen += " AND path='" + path + "'";
+		var sqlsen = "from Sharefile where " + field + "='" + cellphone + "'";
+		if(path) {
+			sqlsen += " AND path='" + path + "'";
+		}
+
+		return store.query(sqlsen);
 	}
 
-	return store.query(sqlsen);
+	return [];
 }
